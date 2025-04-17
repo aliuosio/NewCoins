@@ -19,13 +19,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger("view_analysis")
 
-# Database connection parameters
+# Load environment variables
+load_dotenv()
+
+# Database connection parameters from environment variables
 DB_PARAMS = {
-    'dbname': 'pumpanddump',
-    'user': 'SpecialOsio',
-    'password': 'oeh_ahb6Ahzah7exeish',
-    'host': 'postgres',
-    'port': '5432'
+    'dbname': os.getenv('POSTGRES_DB'),
+    'user': os.getenv('POSTGRES_USER'),
+    'password': os.getenv('POSTGRES_PASSWORD'),
+    'host': os.getenv('POSTGRES_HOST'),
+    'port': os.getenv('POSTGRES_PORT')
 }
 
 def get_connection():
