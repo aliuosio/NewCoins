@@ -13,7 +13,11 @@ from typing import List, Dict, Any
 
 from .db import DBConnection
 
-logger = logging.getLogger(__name__)
+# Import AnalysisResult from the renamed module
+# We need to use relative import to get to the parent directory
+from .. import crypto_analyzer
+
+logger = logging.getLogger("analysis_db")
 
 def create_analysis_table():
     """
@@ -37,7 +41,7 @@ def create_analysis_table():
         logger.error(f"Error creating analysis table: {e}")
         raise
 
-def save_analysis_results(results: List[Dict[str, Any]], symbol: str):
+def save_analysis_results(results: List[crypto_analyzer.AnalysisResult], symbol: str):
     """
     Save the analysis results to the database.
     

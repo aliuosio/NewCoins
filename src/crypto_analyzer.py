@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-Analyze a cryptocurrency using the PumpAndDump indicator system.
-This script uses real data from CoinGecko to evaluate a cryptocurrency.
+Crypto Analyzer - Analyze cryptocurrencies using the PumpAndDump indicator system.
+
+This script fetches data from CoinGecko API, runs multiple technical indicators,
+and provides a comprehensive analysis with scores and recommendations.
+Results can be saved to the database for historical tracking.
+
+Usage:
+    python crypto_analyzer.py BTC,ETH,SOL [--verbose] [--save] [--mock]
 """
 import sys
 import logging
@@ -28,7 +34,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("analyze_coin")
+logger = logging.getLogger("crypto_analyzer")
 
 def print_result(result):
     """Print indicator result in a formatted way"""
