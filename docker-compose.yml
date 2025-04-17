@@ -1,0 +1,72 @@
+services:
+
+  # ollama:
+  #   container_name: ${NAMESPACE}_ollama
+  #   image: ollama/ollama:latest
+  #   pull_policy: always
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${OLLAMA_PORT}:11434"
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   env_file:
+  #     - .env
+  #   tty: true
+  #   init: true
+  #   privileged: true
+  #   volumes:
+  #     - ~/.ollama:/root/.ollama
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: ${OLLAMA_GPU_DRIVER-nvidia}
+  #             count: 1
+  #             capabilities:
+  #               - gpu
+                
+  python:
+    build:
+      context: ./.docker/python
+      args:
+        PY_VERSION: ${PY_VERSION}
+    container_name: ${NAMESPACE}_python
+    image: osioaliu/python:${PY_VERSION}
+    tty: true
+    init: true
+    depends_on:
+      - postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    working_dir: /src
+    environment:
+      - PYTHONPATH=/src
+    command: >
+      /bin/bash -c "
+        pip install --upgrade pip &&
+        pip install -r requirements.txt &&
+        tail -f /dev/null
+      "
+    volumes:
+      - ./src:/src
+
+  postgres:
+    container_name: ${NAMESPACE}_postgres
+    image: postgres:${POSTGRES_VERSION}
+    pull_policy: always
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pg_data:
