@@ -58,6 +58,7 @@ def main():
     parser.add_argument('symbol', type=str, help='Symbol of the cryptocurrency to analyze (e.g., BTC)')
     parser.add_argument('--mock', action='store_true', help='Use mock data instead of real data')
     parser.add_argument('--save', action='store_true', help='Save results to database')
+    parser.add_argument('--verbose', action='store_true', help='Show detailed results for each indicator')
     args = parser.parse_args()
     
     symbol = args.symbol.upper()
@@ -212,9 +213,10 @@ def main():
     # Run indicators
     results = runner.run_all_indicators(indicators, symbol)
     
-    # Print results
-    for result in results:
-        print_result(result)
+    # Skip printing detailed results unless verbose mode is enabled
+    if args.verbose:
+        for result in results:
+            print_result(result)
     
     # Print summary
     print("\n" + "=" * 50)
