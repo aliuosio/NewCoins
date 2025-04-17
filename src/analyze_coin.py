@@ -54,18 +54,19 @@ def print_result(result):
 def main():
     """Main entry point"""
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Analyze a cryptocurrency using the PumpAndDump indicator system')
-    parser.add_argument('symbol', type=str, help='Symbol of the cryptocurrency to analyze (e.g., BTC)')
+    parser = argparse.ArgumentParser(description='Analyze cryptocurrencies using the PumpAndDump indicator system')
+    parser.add_argument('symbols', type=str, help='Symbol(s) of the cryptocurrency to analyze (e.g., BTC or BTC,ETH,SOL)')
     parser.add_argument('--mock', action='store_true', help='Use mock data instead of real data')
     parser.add_argument('--save', action='store_true', help='Save results to database')
     parser.add_argument('--verbose', action='store_true', help='Show detailed results for each indicator')
     args = parser.parse_args()
     
-    symbol = args.symbol.upper()
+    # Split the symbols by comma and convert to uppercase
+    symbols = [s.strip().upper() for s in args.symbols.split(',')]
     use_mock = args.mock
     save_to_db = args.save
     
-    print(f"Analyzing {symbol} with {'mock' if use_mock else 'real'} data")
+    print(f"Analyzing {', '.join(symbols)} with {'mock' if use_mock else 'real'} data")
     
     # Create data provider
     if use_mock:
@@ -210,40 +211,46 @@ def main():
     # Create indicator runner
     runner = IndicatorRunner()
     
-    # Run indicators
-    results = runner.run_all_indicators(indicators, symbol)
-    
-    # Skip printing detailed results unless verbose mode is enabled
-    if args.verbose:
+    # Process each symbol
+    for symbol in symbols:
+        print(f"\n\n{'#' * 70}")
+        print(f"# ANALYZING {symbol}")
+        print(f"{'#' * 70}")
+        
+        # Run indicators for this symbol
+        results = runner.run_all_indicators(indicators, symbol)
+        
+        # Skip printing detailed results unless verbose mode is enabled
+        if args.verbose:
+            for result in results:
+                print_result(result)
+        
+        # Print summary
+        print("\n" + "=" * 50)
+        print("SUMMARY")
+        print("=" * 50)
+        
+        total_score = sum(r.score for r in results)
+        max_score = sum(r.max_score for r in results)
+        
+        print(f"Symbol: {symbol}")
+        print(f"Total Score: {total_score:.2f}/{max_score:.2f} ({total_score/max_score*100:.1f}%)")
+        
         for result in results:
-            print_result(result)
-    
-    # Print summary
-    print("\n" + "=" * 50)
-    print("SUMMARY")
-    print("=" * 50)
-    
-    total_score = sum(r.score for r in results)
-    max_score = sum(r.max_score for r in results)
-    
-    print(f"Symbol: {symbol}")
-    print(f"Total Score: {total_score:.2f}/{max_score:.2f} ({total_score/max_score*100:.1f}%)")
-    
-    for result in results:
-        print(f"  {result.indicator_name}: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
-    
-    # Return a recommendation based on the score
-    percentage = total_score / max_score * 100 if max_score > 0 else 0
-    if percentage >= 80:
-        print("\nRECOMMENDATION: STRONG BUY - High potential for growth")
-    elif percentage >= 70:
-        print("\nRECOMMENDATION: BUY - Good potential for growth")
-    elif percentage >= 60:
-        print("\nRECOMMENDATION: HOLD - Moderate potential")
-    elif percentage >= 50:
-        print("\nRECOMMENDATION: WATCH - Some concerns")
-    else:
-        print("\nRECOMMENDATION: AVOID - Significant concerns")
+            print(f"  {result.indicator_name}: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+        
+        # Return a recommendation based on the score
+        percentage = total_score / max_score * 100 if max_score > 0 else 0
+        if percentage >= 80:
+            print("\nRECOMMENDATION: STRONG BUY - High potential for growth")
+        elif percentage >= 70:
+            print("\nRECOMMENDATION: BUY - Good potential for growth")
+        elif percentage >= 60:
+            print("\nRECOMMENDATION: HOLD - Moderate potential")
+        elif percentage >= 50:
+            print("\nRECOMMENDATION: WATCH - Some concerns")
+        else:
+            print("\nRECOMMENDATION: AVOID - Significant concerns")
 
 if __name__ == "__main__":
     main()
