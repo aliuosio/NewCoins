@@ -76,8 +76,6 @@ def save_analysis_results(results: List[Dict[str, Any]], symbol: str):
         for result in results:
             indicator_name = result.indicator_name
             indicator_data[f"{indicator_name}_score"] = result.score
-            indicator_data[f"{indicator_name}_max"] = result.max_score
-            indicator_data[f"{indicator_name}_percentage"] = (result.score / result.max_score * 100) if result.max_score > 0 else 0
             
             # Store raw details for future reference
             raw_data[indicator_name] = result.details
@@ -138,8 +136,6 @@ def save_analysis_results(results: List[Dict[str, Any]], symbol: str):
             "symbol": symbol,
             "analysis_date": datetime.now(),
             "total_score": total_score,
-            "max_score": max_score,
-            "percentage": percentage,
             "recommendation": recommendation,
             "raw_data": Json(raw_data)
         }

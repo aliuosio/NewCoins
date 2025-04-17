@@ -59,8 +59,6 @@ def get_latest_analysis(symbol=None, days=7, limit=10):
                     symbol, 
                     analysis_date, 
                     total_score, 
-                    max_score, 
-                    percentage, 
                     recommendation,
                     trading_volume_score,
                     liquidity_score,
@@ -85,8 +83,6 @@ def get_latest_analysis(symbol=None, days=7, limit=10):
                     symbol, 
                     analysis_date, 
                     total_score, 
-                    max_score, 
-                    percentage, 
                     recommendation,
                     trading_volume_score,
                     liquidity_score,
@@ -136,12 +132,26 @@ def display_results(results):
         "Audit"
     ]
     
+    # Define max scores for each indicator
+    MAX_SCORES = {
+        'trading_volume': 15.0,
+        'liquidity': 15.0,
+        'whale_transactions': 10.0,
+        'token_distribution': 10.0,
+        'pre_sale_vesting': 10.0,
+        'smart_contract_audit': 10.0
+    }
+    TOTAL_MAX_SCORE = 70.0
+    
     rows = []
     for r in results:
+        # Calculate percentage on-the-fly
+        percentage = (r['total_score'] / TOTAL_MAX_SCORE) * 100
+        
         rows.append([
             r['symbol'],
             r['analysis_date'].strftime('%Y-%m-%d %H:%M'),
-            f"{r['percentage']:.1f}%",
+            f"{percentage:.1f}%",
             r['recommendation'],
             f"{r['trading_volume_score']:.1f}",
             f"{r['liquidity_score']:.1f}",
