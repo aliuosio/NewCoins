@@ -9,11 +9,15 @@ Results can be saved to the database for historical tracking.
 Usage:
     python analyzer.py BTC,ETH,SOL [--verbose] [--save] [--mock]
 """
-import sys
-import logging
 import argparse
+import logging
+import sys
+import json
+import time
 import os
 from typing import Dict, Any, List
+from tabulate import tabulate
+from datetime import datetime, timedelta
 
 from Analyse.Technical import (
     TradingVolumeIndicator,
@@ -33,8 +37,8 @@ from Analyse.Social import (
 from Analyse import IndicatorRunner
 
 # Import database utilities
-from utils.analysis_db import create_analysis_table, save_analysis_results
-from utils.social_db import create_social_table, save_social_results
+from utils.analysis_db import create_analysis_table, save_analysis_results, get_latest_analysis
+from utils.social_db import create_social_table, save_social_results, get_latest_social
 
 # Configure logging
 logging.basicConfig(
@@ -67,26 +71,10 @@ def print_result(result):
             else:
                 print(f"  {key}: {value}")
 
-def main():
-    """Main entry point"""
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Analyze cryptocurrencies using the PumpAndDump indicator system')
-    parser.add_argument('symbols', type=str, help='Symbol(s) of the cryptocurrency to analyze (e.g., BTC or BTC,ETH,SOL)')
-    parser.add_argument('--mock', action='store_true', help='Use mock data instead of real data')
-    parser.add_argument('--save', action='store_true', help='Save results to database')
-    parser.add_argument('--verbose', action='store_true', help='Show detailed results for each indicator')
-    parser.add_argument('--social', action='store_true', help='Include social indicators in analysis')
-    args = parser.parse_args()
-    
-    # Split the symbols by comma and convert to uppercase
-    symbols = [s.strip().upper() for s in args.symbols.split(',')]
-    use_mock = args.mock
-    save_to_db = args.save
-    
-    print(f"Analyzing {', '.join(symbols)} with {'mock' if use_mock else 'real'} data")
-    
+def run_analysis(symbol, verbose, mock, social):
+    """Run analysis for a symbol"""
     # Create data provider
-    if use_mock:
+    if mock:
         # Create a more comprehensive mock data provider
         class ComprehensiveMockDataProvider:
             """Mock data provider with realistic test data for all indicators"""
@@ -232,72 +220,173 @@ def main():
     ]
     
     indicators = technical_indicators
-    if args.social:
+    if social:
         indicators += social_indicators
     
     # Create indicator runner
     runner = IndicatorRunner()
     
-    # Process each symbol
-    for symbol in symbols:
-        print(f"\n\n{'#' * 70}")
-        print(f"# ANALYZING {symbol}")
-        print(f"{'#' * 70}")
-        
-        # Run indicators for this symbol
-        results = runner.run_all_indicators(indicators, symbol)
-        
-        # Skip printing detailed results unless verbose mode is enabled
-        if args.verbose:
-            for result in results:
-                print_result(result)
-        
-        # Print summary
-        print("\n" + "=" * 50)
-        print("SUMMARY")
-        print("=" * 50)
-        
-        total_score = sum(r.score for r in results)
-        max_score = sum(r.max_score for r in results)
-        
-        print(f"Symbol: {symbol}")
-        print(f"Total Score: {total_score:.2f}/{max_score:.2f} ({total_score/max_score*100:.1f}%)")
-        
+    # Run indicators for this symbol
+    results = runner.run_all_indicators(indicators, symbol)
+    
+    # Skip printing detailed results unless verbose mode is enabled
+    if verbose:
         for result in results:
-            print(f"  {result.indicator_name}: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+            print_result(result)
+    
+    return results
+
+def display_technical_results(results):
+    """Display technical analysis results in a table"""
+    if not results:
+        print("No technical analysis results found.")
+        return
         
-        # Return a recommendation based on the score
-        percentage = total_score / max_score * 100 if max_score > 0 else 0
-        if percentage >= 80:
-            print("\nRECOMMENDATION: STRONG BUY - High potential for growth")
-        elif percentage >= 70:
-            print("\nRECOMMENDATION: BUY - Good potential for growth")
-        elif percentage >= 60:
-            print("\nRECOMMENDATION: HOLD - Moderate potential")
-        elif percentage >= 50:
-            print("\nRECOMMENDATION: WATCH - Some concerns")
-        else:
-            print("\nRECOMMENDATION: AVOID - Significant concerns")
-            
-        # Save results to database if requested
-        if save_to_db:
+    # Define max scores for each indicator
+    MAX_SCORES = {
+        'trading_volume': 15.0,
+        'liquidity': 15.0,
+        'whale_transactions': 10.0,
+        'token_distribution': 10.0,
+        'pre_sale_vesting': 10.0,
+        'smart_contract_audit': 10.0
+    }
+    TOTAL_MAX_SCORE = 70.0
+    
+    # Prepare data for tabulation
+    headers = [
+        "Symbol", 
+        "Date", 
+        "Score", 
+        "Recommendation",
+        "Volume",
+        "Liquidity",
+        "Whales",
+        "Distribution",
+        "Vesting",
+        "Audit"
+    ]
+    
+    rows = []
+    for r in results:
+        # Calculate percentage on-the-fly
+        percentage = (r['total_score'] / TOTAL_MAX_SCORE) * 100
+        
+        rows.append([
+            r['symbol'],
+            r['analysis_date'].strftime('%Y-%m-%d %H:%M'),
+            f"{percentage:.1f}%",
+            r['recommendation'],
+            f"{r.get('trading_volume_score', 0):.1f}",
+            f"{r.get('liquidity_score', 0):.1f}",
+            f"{r.get('whale_transactions_score', 0):.1f}",
+            f"{r.get('token_distribution_score', 0):.1f}",
+            f"{r.get('pre_sale_vesting_score', 0):.1f}",
+            f"{r.get('smart_contract_audit_score', 0):.1f}"
+        ])
+    
+    # Display the table
+    print(tabulate(rows, headers=headers, tablefmt="grid"))
+
+def display_social_results(results):
+    """Display social analysis results in a table"""
+    if not results:
+        print("No social analysis results found.")
+        return
+    
+    # Prepare data for tabulation
+    headers = [
+        "Symbol", 
+        "Date", 
+        "Total",
+        "Volume",
+        "Sentiment",
+        "Developer"
+    ]
+    
+    rows = []
+    for r in results:
+        rows.append([
+            r['symbol'],
+            r['analysis_date'].strftime('%Y-%m-%d %H:%M'),
+            f"{r.get('total_social_score', 0):.1f}",
+            f"{r.get('social_volume_score', 0):.1f}",
+            f"{r.get('sentiment_analysis_score', 0):.1f}",
+            f"{r.get('developer_activity_score', 0):.1f}"
+        ])
+    
+    # Display the table
+    print(tabulate(rows, headers=headers, tablefmt="grid"))
+
+def main():
+    """Main function to run the analysis or view reports"""
+    parser = argparse.ArgumentParser(description='Analyze cryptocurrencies or view saved results')
+    
+    # Create subparsers for different commands
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
+    
+    # Analyze command
+    analyze_parser = subparsers.add_parser('analyze', help='Analyze cryptocurrencies')
+    analyze_parser.add_argument('symbol', help='Cryptocurrency symbol(s) to analyze (comma-separated)')
+    analyze_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+    analyze_parser.add_argument('--save', action='store_true', help='Save results to database')
+    analyze_parser.add_argument('--mock', action='store_true', help='Use mock data for testing')
+    analyze_parser.add_argument('--social', action='store_true', help='Include social indicators in analysis')
+    
+    # Report command
+    report_parser = subparsers.add_parser('report', help='View saved analysis results')
+    report_parser.add_argument('--symbol', help='Cryptocurrency symbol to filter by')
+    report_parser.add_argument('--days', type=int, default=7, help='Number of days to look back')
+    report_parser.add_argument('--limit', type=int, default=10, help='Maximum number of results to show')
+    report_parser.add_argument('--social', action='store_true', help='Show social indicators instead of technical')
+    args = parser.parse_args()
+    
+    # Handle different commands
+    if args.command == 'analyze':
+        # Split the symbols by comma and convert to uppercase
+        symbols = [s.strip().upper() for s in args.symbol.split(',')]
+        
+        # Process each symbol
+        for symbol in symbols:
             try:
-                # Save technical analysis results
-                create_analysis_table()
-                technical_results = [r for r in results if r.indicator_name in 
-                                    [i.name for i in technical_indicators]]
-                save_analysis_results(technical_results, symbol)
-                logger.info(f"Technical analysis results for {symbol} saved to database")
+                # Run the analysis
+                results = run_analysis(symbol, args.verbose, args.mock, args.social)
                 
-                # Save social analysis results if included
-                if args.social:
-                    create_social_table()
-                    social_results = [r for r in results if r.indicator_name in 
-                                     [i.name for i in social_indicators]]
-                    save_social_results(social_results, symbol)
-                    logger.info(f"Social analysis results for {symbol} saved to database")
+                # Save results to database if requested
+                if args.save:
+                    try:
+                        # Save technical analysis results
+                        create_analysis_table()
+                        technical_results = [r for r in results if r.indicator_name in 
+                                        [i.name for i in technical_indicators]]
+                        save_analysis_results(technical_results, symbol)
+                        logger.info(f"Technical analysis results for {symbol} saved to database")
+                        
+                        # Save social analysis results if included
+                        if args.social:
+                            create_social_table()
+                            social_results = [r for r in results if r.indicator_name in 
+                                         [i.name for i in social_indicators]]
+                            save_social_results(social_results, symbol)
+                            logger.info(f"Social analysis results for {symbol} saved to database")
+                    except Exception as e:
+                        logger.error(f"Failed to save analysis results: {e}")
             except Exception as e:
-                logger.error(f"Failed to save analysis results: {e}")
+                logger.error(f"Error analyzing {symbol}: {e}")
+                print(f"Error analyzing {symbol}: {e}")
+    
+    elif args.command == 'report':
+        # Get analysis results based on report type
+        if args.social:
+            results = get_latest_social(symbol=args.symbol, limit=args.limit)
+            display_social_results(results)
+        else:
+            results = get_latest_analysis(symbol=args.symbol, limit=args.limit)
+            display_technical_results(results)
+    
+    else:
+        # If no command is specified, show help
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

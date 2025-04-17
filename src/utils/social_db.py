@@ -68,39 +68,8 @@ def save_social_results(results: List[analyzer.AnalysisResult], symbol: str):
             # Store raw details for future reference
             raw_data[indicator_name] = result.details
         
-        # Extract specific metrics for dedicated columns
-        social_metrics = {}
-        
-        # Social volume metrics
-        for result in results:
-            if result.indicator_name == "social_volume" and hasattr(result, "details"):
-                details = result.details
-                if "mentions_24h" in details:
-                    social_metrics["mentions_24h"] = details["mentions_24h"]
-                if "mentions_change_pct" in details:
-                    social_metrics["mentions_change_pct"] = details["mentions_change_pct"]
-        
-        # Sentiment metrics
-        for result in results:
-            if result.indicator_name == "sentiment_analysis" and hasattr(result, "details"):
-                details = result.details
-                if "sentiment_positive_pct" in details:
-                    social_metrics["sentiment_positive_pct"] = details["sentiment_positive_pct"]
-                if "sentiment_negative_pct" in details:
-                    social_metrics["sentiment_negative_pct"] = details["sentiment_negative_pct"]
-                if "sentiment_neutral_pct" in details:
-                    social_metrics["sentiment_neutral_pct"] = details["sentiment_neutral_pct"]
-        
-        # Developer metrics
-        for result in results:
-            if result.indicator_name == "developer_activity" and hasattr(result, "details"):
-                details = result.details
-                if "github_commits_4w" in details:
-                    social_metrics["github_commits_4w"] = details["github_commits_4w"]
-                if "github_contributors" in details:
-                    social_metrics["github_contributors"] = details["github_contributors"]
-                if "github_stars" in details:
-                    social_metrics["github_stars"] = details["github_stars"]
+        # Calculate total social score
+        total_social_score = sum(r.score for r in results)
         
         # Prepare the insert data
         insert_data = {
@@ -112,8 +81,8 @@ def save_social_results(results: List[analyzer.AnalysisResult], symbol: str):
         # Add indicator-specific data
         insert_data.update(indicator_data)
         
-        # Add social metrics
-        insert_data.update(social_metrics)
+        # Add total social score
+        insert_data["total_social_score"] = total_social_score
         
         # Build the SQL query dynamically based on available fields
         fields = list(insert_data.keys())

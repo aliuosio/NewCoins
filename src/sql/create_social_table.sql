@@ -14,22 +14,17 @@ CREATE TABLE IF NOT EXISTS {table} (
     -- Social Volume (10 points): Measures mentions and discussions
     -- Full score for high discussion volume across platforms
     social_volume_score DECIMAL(5,2),       -- Score for social media mentions and discussion volume
-    mentions_24h INTEGER,                   -- Number of mentions in the last 24 hours
-    mentions_change_pct DECIMAL(5,2),       -- Percentage change in mentions
     
     -- Sentiment Analysis (10 points): Evaluates positive vs negative sentiment
     -- Higher score for predominantly positive sentiment
-    sentiment_score DECIMAL(5,2),           -- Score for overall sentiment analysis
-    sentiment_positive_pct DECIMAL(5,2),    -- Percentage of positive sentiment
-    sentiment_negative_pct DECIMAL(5,2),    -- Percentage of negative sentiment
-    sentiment_neutral_pct DECIMAL(5,2),     -- Percentage of neutral sentiment
+    sentiment_analysis_score DECIMAL(5,2),  -- Score for overall sentiment analysis
     
     -- Developer Activity (10 points): Tracks GitHub commits and contributors
     -- Higher score for active development and growing contributor base
-    developer_score DECIMAL(5,2),           -- Score for developer activity
-    github_commits_4w INTEGER,              -- GitHub commits in last 4 weeks
-    github_contributors INTEGER,            -- Number of active contributors
-    github_stars INTEGER,                   -- Number of GitHub stars
+    developer_activity_score DECIMAL(5,2),  -- Score for developer activity
+    
+    -- Overall social score
+    total_social_score DECIMAL(5,2),        -- Sum of all social indicator scores
     
     -- Raw data for future reference
     raw_data JSONB,                         -- Detailed raw data in JSON format

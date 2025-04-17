@@ -24,52 +24,52 @@ A comprehensive cryptocurrency analysis tool that evaluates various technical an
 docker-compose up -d
 ```
 
-### Analyzing Cryptocurrencies
+### Using the Analyzer Tool
 
-Use the `analyzer.py` script to analyze one or more cryptocurrencies:
+The `analyzer.py` script provides two main commands: `analyze` and `report`.
+
+#### Analyzing Cryptocurrencies
 
 ```bash
 # Basic usage - analyze Bitcoin
-python src/analyzer.py BTC
+python src/analyzer.py analyze BTC
 
 # Analyze multiple cryptocurrencies
-python src/analyzer.py BTC,ETH,SOL,DOGE
+python src/analyzer.py analyze BTC,ETH,SOL,DOGE
 
 # Show detailed analysis information
-python src/analyzer.py BTC --verbose
+python src/analyzer.py analyze BTC --verbose
 
 # Save results to database
-python src/analyzer.py BTC --save
+python src/analyzer.py analyze BTC --save
 
 # Include social indicators in analysis
-python src/analyzer.py BTC --social
+python src/analyzer.py analyze BTC --social
 
 # Use mock data for testing
-python src/analyzer.py BTC --mock
+python src/analyzer.py analyze BTC --mock
 ```
 
-### Viewing Saved Analysis Results
-
-Use the `report.py` script to view previously saved analysis results:
+#### Viewing Saved Analysis Results
 
 ```bash
 # View all recent technical analyses
-python src/report.py
+python src/analyzer.py report
 
 # View social indicators instead
-python src/report.py --social
+python src/analyzer.py report --social
 
 # Filter by specific cryptocurrency
-python src/report.py --symbol BTC
+python src/analyzer.py report --symbol BTC
 
 # Limit to analyses from the last N days
-python src/report.py --days 7
+python src/analyzer.py report --days 7
 
 # Limit number of results
-python src/report.py --limit 5
+python src/analyzer.py report --limit 5
 
 # Combine filters
-python src/report.py --symbol ETH --days 30 --limit 10 --social
+python src/analyzer.py report --symbol ETH --days 30 --limit 10 --social
 ```
 
 ## Indicators
