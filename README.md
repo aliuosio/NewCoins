@@ -32,41 +32,41 @@ The `analyzer.py` script provides two main commands: `analyze` and `report`.
 
 ```bash
 # Basic usage - analyze Bitcoin (includes both technical and social indicators)
-python /src/analyzer.py analyze BTC
+python analyzer.py analyze BTC
 
 # Analyze multiple cryptocurrencies
-python /src/analyzer.py analyze BTC,ETH,SOL,DOGE
+python analyzer.py analyze BTC,ETH,SOL,DOGE
 
 # Show detailed analysis information
-python /src/analyzer.py analyze BTC --verbose
+python analyzer.py analyze BTC --verbose
 
 # Save results to database
-python /src/analyzer.py analyze BTC --save
+python analyzer.py analyze BTC --save
 ```
 
 #### Viewing Saved Analysis Results
 
 ```bash
 # View all analyses (both technical and social)
-python /src/analyzer.py report
+python analyzer.py report
 
 # View only technical indicators
-python /src/analyzer.py report --type technical
+python analyzer.py report --type technical
 
 # View only social indicators
-python /src/analyzer.py report --type social
+python analyzer.py report --type social
 
 # Filter by specific cryptocurrency
-python /src/analyzer.py report --symbol BTC
+python analyzer.py report --symbol BTC
 
 # Limit to analyses from the last N days
-python /src/analyzer.py report --days 7
+python analyzer.py report --days 7
 
 # Limit number of results
-python /src/analyzer.py report --limit 5
+python analyzer.py report --limit 5
 
 # Combine filters
-python /src/analyzer.py report --symbol ETH --days 30 --limit 10 --type social
+python analyzer.py report --symbol ETH --days 30 --limit 10 --type social
 ```
 
 ## Indicators
