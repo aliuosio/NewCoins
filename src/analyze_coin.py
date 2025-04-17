@@ -20,6 +20,9 @@ from Analyse import (
     IndicatorRunner
 )
 
+# Import database utilities
+from utils.analysis_db import create_analysis_table, save_analysis_results
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -251,6 +254,18 @@ def main():
             print("\nRECOMMENDATION: WATCH - Some concerns")
         else:
             print("\nRECOMMENDATION: AVOID - Significant concerns")
+            
+        # Save results to database if requested
+        if save_to_db:
+            try:
+                # Ensure the table exists
+                create_analysis_table()
+                # Save the results
+                save_analysis_results(results, symbol)
+                print(f"\nAnalysis results for {symbol} saved to database")
+            except Exception as e:
+                logger.error(f"Error saving results to database: {e}")
+                print(f"\nError saving results to database: {e}")
 
 if __name__ == "__main__":
     main()
