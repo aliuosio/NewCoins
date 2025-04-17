@@ -31,7 +31,7 @@ The `analyzer.py` script provides two main commands: `analyze` and `report`.
 #### Analyzing Cryptocurrencies
 
 ```bash
-# Basic usage - analyze Bitcoin
+# Basic usage - analyze Bitcoin (includes both technical and social indicators)
 python src/analyzer.py analyze BTC
 
 # Analyze multiple cryptocurrencies
@@ -43,9 +43,6 @@ python src/analyzer.py analyze BTC --verbose
 # Save results to database
 python src/analyzer.py analyze BTC --save
 
-# Include social indicators in analysis
-python src/analyzer.py analyze BTC --social
-
 # Use mock data for testing
 python src/analyzer.py analyze BTC --mock
 ```
@@ -53,11 +50,14 @@ python src/analyzer.py analyze BTC --mock
 #### Viewing Saved Analysis Results
 
 ```bash
-# View all recent technical analyses
+# View all analyses (both technical and social)
 python src/analyzer.py report
 
-# View social indicators instead
-python src/analyzer.py report --social
+# View only technical indicators
+python src/analyzer.py report --type technical
+
+# View only social indicators
+python src/analyzer.py report --type social
 
 # Filter by specific cryptocurrency
 python src/analyzer.py report --symbol BTC
@@ -69,7 +69,7 @@ python src/analyzer.py report --days 7
 python src/analyzer.py report --limit 5
 
 # Combine filters
-python src/analyzer.py report --symbol ETH --days 30 --limit 10 --social
+python src/analyzer.py report --symbol ETH --days 30 --limit 10 --type social
 ```
 
 ## Indicators

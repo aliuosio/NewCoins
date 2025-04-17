@@ -219,9 +219,8 @@ def run_analysis(symbol, verbose, mock, social):
         DeveloperActivityIndicator(data_provider)
     ]
     
-    indicators = technical_indicators
-    if social:
-        indicators += social_indicators
+    # Always include both technical and social indicators
+    indicators = technical_indicators + social_indicators
     
     # Create indicator runner
     runner = IndicatorRunner()
@@ -331,14 +330,14 @@ def main():
     analyze_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
     analyze_parser.add_argument('--save', action='store_true', help='Save results to database')
     analyze_parser.add_argument('--mock', action='store_true', help='Use mock data for testing')
-    analyze_parser.add_argument('--social', action='store_true', help='Include social indicators in analysis')
     
     # Report command
     report_parser = subparsers.add_parser('report', help='View saved analysis results')
     report_parser.add_argument('--symbol', help='Cryptocurrency symbol to filter by')
     report_parser.add_argument('--days', type=int, default=7, help='Number of days to look back')
     report_parser.add_argument('--limit', type=int, default=10, help='Maximum number of results to show')
-    report_parser.add_argument('--social', action='store_true', help='Show social indicators instead of technical')
+    report_parser.add_argument('--type', choices=['technical', 'social', 'all'], default='all', 
+                            help='Type of indicators to show (technical, social, or all)')
     args = parser.parse_args()
     
     # Handle different commands
@@ -362,13 +361,12 @@ def main():
                         save_analysis_results(technical_results, symbol)
                         logger.info(f"Technical analysis results for {symbol} saved to database")
                         
-                        # Save social analysis results if included
-                        if args.social:
-                            create_social_table()
-                            social_results = [r for r in results if r.indicator_name in 
-                                         [i.name for i in social_indicators]]
-                            save_social_results(social_results, symbol)
-                            logger.info(f"Social analysis results for {symbol} saved to database")
+                        # Save social analysis results
+                        create_social_table()
+                        social_results = [r for r in results if r.indicator_name in 
+                                     [i.name for i in social_indicators]]
+                        save_social_results(social_results, symbol)
+                        logger.info(f"Social analysis results for {symbol} saved to database")
                     except Exception as e:
                         logger.error(f"Failed to save analysis results: {e}")
             except Exception as e:
@@ -377,12 +375,22 @@ def main():
     
     elif args.command == 'report':
         # Get analysis results based on report type
-        if args.social:
+        if args.type == 'social':
             results = get_latest_social(symbol=args.symbol, limit=args.limit)
             display_social_results(results)
-        else:
+        elif args.type == 'technical':
             results = get_latest_analysis(symbol=args.symbol, limit=args.limit)
             display_technical_results(results)
+        else:  # 'all'
+            # Show both technical and social results
+            tech_results = get_latest_analysis(symbol=args.symbol, limit=args.limit)
+            social_results = get_latest_social(symbol=args.symbol, limit=args.limit)
+            
+            print("\n=== TECHNICAL INDICATORS ===")
+            display_technical_results(tech_results)
+            
+            print("\n=== SOCIAL INDICATORS ===")
+            display_social_results(social_results)
     
     else:
         # If no command is specified, show help
