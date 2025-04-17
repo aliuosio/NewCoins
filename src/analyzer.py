@@ -15,19 +15,26 @@ import argparse
 import os
 from typing import Dict, Any, List
 
-from Analyse import (
-    CoinGeckoProvider, 
-    TradingVolumeIndicator, 
-    LiquidityIndicator, 
-    WhaleTransactionsIndicator, 
+from Analyse.Technical import (
+    TradingVolumeIndicator,
+    LiquidityIndicator,
+    WhaleTransactionsIndicator,
     TokenDistributionIndicator,
     PreSaleVestingIndicator,
-    SmartContractAuditIndicator,
-    IndicatorRunner
+    SmartContractAuditIndicator
 )
+
+from Analyse.Social import (
+    SocialVolumeIndicator,
+    SentimentAnalysisIndicator,
+    DeveloperActivityIndicator
+)
+
+from Analyse import IndicatorRunner
 
 # Import database utilities
 from utils.analysis_db import create_analysis_table, save_analysis_results
+from utils.social_db import create_social_table, save_social_results
 
 # Configure logging
 logging.basicConfig(
@@ -68,6 +75,7 @@ def main():
     parser.add_argument('--mock', action='store_true', help='Use mock data instead of real data')
     parser.add_argument('--save', action='store_true', help='Save results to database')
     parser.add_argument('--verbose', action='store_true', help='Show detailed results for each indicator')
+    parser.add_argument('--social', action='store_true', help='Include social indicators in analysis')
     args = parser.parse_args()
     
     # Split the symbols by comma and convert to uppercase
@@ -201,7 +209,7 @@ def main():
         data_provider = CoinGeckoProvider(api_key=api_key)
     
     # Create indicators
-    indicators = [
+    technical_indicators = [
         # Market indicators
         TradingVolumeIndicator(data_provider),
         LiquidityIndicator(data_provider),
@@ -216,6 +224,16 @@ def main():
         # Security indicators
         SmartContractAuditIndicator(data_provider)
     ]
+    
+    social_indicators = [
+        SocialVolumeIndicator(data_provider),
+        SentimentAnalysisIndicator(data_provider),
+        DeveloperActivityIndicator(data_provider)
+    ]
+    
+    indicators = technical_indicators
+    if args.social:
+        indicators += social_indicators
     
     # Create indicator runner
     runner = IndicatorRunner()
@@ -264,14 +282,22 @@ def main():
         # Save results to database if requested
         if save_to_db:
             try:
-                # Ensure the table exists
+                # Save technical analysis results
                 create_analysis_table()
-                # Save the results
-                save_analysis_results(results, symbol)
-                print(f"\nAnalysis results for {symbol} saved to database")
+                technical_results = [r for r in results if r.indicator_name in 
+                                    [i.name for i in technical_indicators]]
+                save_analysis_results(technical_results, symbol)
+                logger.info(f"Technical analysis results for {symbol} saved to database")
+                
+                # Save social analysis results if included
+                if args.social:
+                    create_social_table()
+                    social_results = [r for r in results if r.indicator_name in 
+                                     [i.name for i in social_indicators]]
+                    save_social_results(social_results, symbol)
+                    logger.info(f"Social analysis results for {symbol} saved to database")
             except Exception as e:
-                logger.error(f"Error saving results to database: {e}")
-                print(f"\nError saving results to database: {e}")
+                logger.error(f"Failed to save analysis results: {e}")
 
 if __name__ == "__main__":
     main()

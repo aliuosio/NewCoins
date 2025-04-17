@@ -116,7 +116,7 @@ def get_latest_analysis(symbol=None, days=7, limit=10):
         logger.error(f"Error retrieving analysis results: {e}")
         return []
 
-def display_results(results):
+def display_technical_results(results):
     """
     Display analysis results in a table format.
     
@@ -173,19 +173,55 @@ def display_results(results):
     # Display the table
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 
+def display_social_results(results):
+    """
+    Display social results in a table format.
+    
+    Args:
+        results: List of social results
+    """
+    if not results:
+        print("No social results found.")
+        return
+    
+    # Prepare data for tabulation
+    headers = [
+        "Symbol", 
+        "Date", 
+        "Volume",
+        "Sentiment",
+        "Developer"
+    ]
+    
+    rows = []
+    for r in results:
+        rows.append([
+            r['symbol'],
+            r['analysis_date'].strftime('%Y-%m-%d %H:%M'),
+            f"{r.get('social_volume_score', 0):.1f}",
+            f"{r.get('sentiment_analysis_score', 0):.1f}",
+            f"{r.get('developer_activity_score', 0):.1f}"
+        ])
+    
+    # Display the table
+    print(tabulate(rows, headers=headers, tablefmt="grid"))
+
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(description='View cryptocurrency analysis results from the database')
-    parser.add_argument('--symbol', type=str, help='Symbol of the cryptocurrency to view (e.g., BTC)')
-    parser.add_argument('--days', type=int, default=7, help='Number of days to look back')
-    parser.add_argument('--limit', type=int, default=10, help='Maximum number of results to return')
+    """Main function to run the report"""
+    parser = argparse.ArgumentParser(description='View cryptocurrency analysis results')
+    parser.add_argument('--symbol', help='Cryptocurrency symbol to filter by')
+    parser.add_argument('--days', type=int, help='Number of days to look back')
+    parser.add_argument('--limit', type=int, default=10, help='Maximum number of results to show')
+    parser.add_argument('--social', action='store_true', help='Show social indicators instead of technical')
     args = parser.parse_args()
     
     # Get the latest analysis results
-    results = get_latest_analysis(args.symbol, args.days, args.limit)
-    
-    # Display the results
-    display_results(results)
+    if args.social:
+        results = get_latest_social(args.symbol, args.days, args.limit)
+        display_social_results(results)
+    else:
+        results = get_latest_analysis(args.symbol, args.days, args.limit)
+        display_technical_results(results)
 
 if __name__ == "__main__":
     main()

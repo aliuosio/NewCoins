@@ -1,10 +1,11 @@
 # PumpAndDump - Cryptocurrency Analysis Tool
 
-A comprehensive cryptocurrency analysis tool that evaluates various technical indicators to provide investment recommendations.
+A comprehensive cryptocurrency analysis tool that evaluates various technical and social indicators to provide investment recommendations.
 
 ## Features
 
 - Analyzes cryptocurrencies using multiple technical indicators
+- Evaluates social metrics including sentiment and developer activity
 - Saves analysis results to a PostgreSQL database
 - Provides historical data viewing and comparison
 - Supports multiple cryptocurrencies in a single analysis
@@ -40,6 +41,9 @@ python src/analyzer.py BTC --verbose
 # Save results to database
 python src/analyzer.py BTC --save
 
+# Include social indicators in analysis
+python src/analyzer.py BTC --social
+
 # Use mock data for testing
 python src/analyzer.py BTC --mock
 ```
@@ -49,8 +53,11 @@ python src/analyzer.py BTC --mock
 Use the `report.py` script to view previously saved analysis results:
 
 ```bash
-# View all recent analyses
+# View all recent technical analyses
 python src/report.py
+
+# View social indicators instead
+python src/report.py --social
 
 # Filter by specific cryptocurrency
 python src/report.py --symbol BTC
@@ -62,12 +69,12 @@ python src/report.py --days 7
 python src/report.py --limit 5
 
 # Combine filters
-python src/report.py --symbol ETH --days 30 --limit 10
+python src/report.py --symbol ETH --days 30 --limit 10 --social
 ```
 
-## Technical Indicators
+## Indicators
 
-The tool evaluates cryptocurrencies based on these indicators:
+### Technical Indicators (70 points total)
 
 1. **Trading Volume** (15 points)
    - Measures 24h trading volume with full score for volume ≥ $1M
@@ -91,6 +98,20 @@ The tool evaluates cryptocurrencies based on these indicators:
 6. **Smart Contract Audit** (10 points)
    - Assesses contract security, audits, and vulnerabilities
    - Higher score for multiple audits by reputable firms
+
+### Social Indicators (30 points total)
+
+1. **Social Volume** (10 points)
+   - Measures mentions and discussions across social platforms
+   - Full score for high discussion volume (>10,000 mentions in 24h)
+
+2. **Sentiment Analysis** (10 points)
+   - Evaluates positive vs negative sentiment across platforms
+   - Higher score for predominantly positive sentiment (>80% positive)
+
+3. **Developer Activity** (10 points)
+   - Tracks GitHub commits and contributors
+   - Higher score for active development (100+ commits, 20+ contributors)
 
 ## Recommendations
 
