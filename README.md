@@ -42,9 +42,6 @@ python src/analyzer.py analyze BTC --verbose
 
 # Save results to database
 python src/analyzer.py analyze BTC --save
-
-# Use mock data for testing
-python src/analyzer.py analyze BTC --mock
 ```
 
 #### Viewing Saved Analysis Results
