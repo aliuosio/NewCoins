@@ -30,12 +30,11 @@ class SentimentAnalysisIndicator(BaseIndicator):
     - Recent sentiment trend (improving or declining)
     """
     
-    def __init__(self):
+    def __init__(self, data_provider):
         super().__init__(
-            name="sentiment_analysis",
-            display_name="Sentiment Analysis",
-            description="Evaluates positive vs negative sentiment across platforms",
-            max_score=10.0
+            "sentiment_analysis",
+            10.0,
+            data_provider
         )
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:

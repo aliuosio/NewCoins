@@ -30,12 +30,11 @@ class DeveloperActivityIndicator(BaseIndicator):
     - GitHub stars and forks as proxy for community interest
     """
     
-    def __init__(self):
+    def __init__(self, data_provider):
         super().__init__(
-            name="developer_activity",
-            display_name="Developer Activity",
-            description="Tracks GitHub commits and contributors",
-            max_score=10.0
+            "developer_activity",
+            10.0,
+            data_provider
         )
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:

@@ -26,47 +26,47 @@ docker-compose up -d
 
 ### Using the Analyzer Tool
 
-The `analyzer.py` script provides two main commands: `analyze` and `report`.
+The `src/main.py` script provides two main commands: `analyze` and `report`.
 
 #### Analyzing Cryptocurrencies
 
 ```bash
 # Basic usage - analyze Bitcoin (includes both technical and social indicators)
-python analyzer.py analyze BTC
+python src/main.py analyze BTC
 
 # Analyze multiple cryptocurrencies
-python analyzer.py analyze BTC,ETH,SOL,DOGE
+python src/main.py analyze BTC,ETH,SOL,DOGE
 
-# Show detailed analysis information (displays all indicator metrics)
-python analyzer.py analyze BTC --verbose
+# Analyze with verbose output
+python src/main.py analyze BTC --verbose
 
-# Save results to database
-python analyzer.py analyze BTC --save
+# Save analysis results to database
+python src/main.py analyze BTC --save
 ```
 
 #### Viewing Saved Analysis Results
 
 ```bash
 # View all analyses (both technical and social)
-python analyzer.py report
+python src/main.py report
 
 # View only technical indicators
-python analyzer.py report --type technical
+python src/main.py report --type technical
 
 # View only social indicators
-python analyzer.py report --type social
+python src/main.py report --type social
 
 # Filter by specific cryptocurrency
-python analyzer.py report --symbol BTC
+python src/main.py report --symbol BTC
 
 # Limit to analyses from the last N days
-python analyzer.py report --days 7
+python Analyse/main.py report --days 7
 
 # Limit number of results
-python analyzer.py report --limit 5
+python Analyse/main.py report --limit 5
 
 # Combine filters
-python analyzer.py report --symbol ETH --days 30 --limit 10 --type social
+python Analyse/main.py report --symbol ETH --days 30 --limit 10 --type social
 ```
 
 ## Indicators

@@ -29,12 +29,11 @@ class SocialVolumeIndicator(BaseIndicator):
     - Cross-platform presence (+1 point for active on 3+ platforms)
     """
     
-    def __init__(self):
+    def __init__(self, data_provider):
         super().__init__(
-            name="social_volume",
-            display_name="Social Volume",
-            description="Measures social media mentions and discussion volume",
-            max_score=10.0
+            "social_volume",
+            10.0,
+            data_provider
         )
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:

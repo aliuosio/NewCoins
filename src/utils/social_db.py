@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from .db import DBConnection
-from .. import analyzer
 
 logger = logging.getLogger("social_db")
 
@@ -39,7 +38,7 @@ def create_social_table():
         logger.error(f"Error creating social indicators table: {e}")
         raise
 
-def save_social_results(results: List[analyzer.AnalysisResult], symbol: str):
+def save_social_results(results: List[Dict[str, Any]], symbol: str):
     """
     Save the social indicators results to the database.
     
@@ -55,21 +54,21 @@ def save_social_results(results: List[analyzer.AnalysisResult], symbol: str):
     
     try:
         # Calculate overall social score
-        total_score = sum(r.score for r in results)
+        total_score = sum(r.get('score', 0) for r in results)
         
         # Prepare indicator-specific data
         indicator_data = {}
         raw_data = {}
         
         for result in results:
-            indicator_name = result.indicator_name
-            indicator_data[f"{indicator_name}_score"] = result.score
+            indicator_name = result.get('indicator_name')
+            indicator_data[f"{indicator_name}_score"] = result.get('score', 0)
             
             # Store raw details for future reference
-            raw_data[indicator_name] = result.details
+            raw_data[indicator_name] = result.get('details', {})
         
         # Calculate total social score
-        total_social_score = sum(r.score for r in results)
+        total_social_score = sum(r.get('score', 0) for r in results)
         
         # Prepare the insert data
         insert_data = {

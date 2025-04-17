@@ -1,137 +1,109 @@
 #!/usr/bin/env python3
 """
-Main script for testing indicators without writing to the database.
+Main CLI for PumpAndDump analysis (technical + social indicators).
 """
+import argparse
 import os
 import sys
 import logging
-import argparse
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from typing import List
-from dotenv import load_dotenv
+from tabulate import tabulate
+from datetime import datetime
 
-from .data_providers import CoinGeckoProvider, MockDataProvider
-from .indicators import TradingVolumeIndicator, MarketCapIndicator, PriceStabilityIndicator
-from .indicator_runner import IndicatorRunner
-from .interfaces import IIndicator
+from Analyse.Technical import (
+    TradingVolumeIndicator,
+    LiquidityIndicator,
+    WhaleTransactionsIndicator,
+    TokenDistributionIndicator,
+    PreSaleVestingIndicator,
+    SmartContractAuditIndicator
+)
+from Analyse.Social import (
+    SocialVolumeIndicator,
+    SentimentAnalysisIndicator,
+    DeveloperActivityIndicator
+)
+from Analyse.indicator_runner import IndicatorRunner
+from utils.db import create_tables
+from utils.analysis_db import create_analysis_table, save_analysis_results, get_latest_analysis
+from utils.social_db import create_social_table, save_social_results, get_latest_social
 
-
-def setup_logging():
-    """Set up logging configuration"""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-
-def create_indicators(data_provider) -> List[IIndicator]:
-    """
-    Create all available indicators
-    
-    Args:
-        data_provider: Data provider to use for all indicators
-        
-    Returns:
-        List of indicator instances
-    """
-    return [
-        TradingVolumeIndicator(data_provider),
-        MarketCapIndicator(data_provider),
-        PriceStabilityIndicator(data_provider)
-    ]
-
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("pumptandump")
 
 def print_result(result):
-    """
-    Print indicator result in a formatted way
-    
-    Args:
-        result: Indicator result to print
-    """
     print(f"\n{'=' * 50}")
     print(f"INDICATOR: {result.indicator_name}")
     print(f"{'=' * 50}")
     print(f"Symbol: {result.symbol}")
     print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
-    
-    if not result.success:
+    if hasattr(result, 'error') and result.error:
         print(f"ERROR: {result.error}")
     else:
         print("\nDetails:")
-        for key, value in result.details.items():
-            if isinstance(value, list):
-                print(f"  {key}:")
-                for item in value:
-                    print(f"    - {item}")
-            else:
-                print(f"  {key}: {value}")
-    
-    if result.execution_time_ms is not None:
-        print(f"\nExecution time: {result.execution_time_ms}ms")
+        for k, v in result.details.items():
+            if isinstance(v, dict):
+                print(f"  {k}:")
+                for kk, vv in v.items(): print(f"    {kk}: {vv}")
+            elif isinstance(v, list):
+                print(f"  {k}:")
+                for item in v: print(f"    - {item}")
+            else: print(f"  {k}: {v}")
+
+
+def run_analysis(symbol: str, verbose: bool):
+    # Prepare indicators and runner
+    provider = None
+    from Analyse.data_providers import CoinGeckoProvider
+    provider = CoinGeckoProvider(api_key=os.getenv('COINGECKO_API_KEY',''))
+    tech = [TradingVolumeIndicator(provider), LiquidityIndicator(provider), WhaleTransactionsIndicator(provider), TokenDistributionIndicator(provider), PreSaleVestingIndicator(provider), SmartContractAuditIndicator(provider)]
+    social = [SocialVolumeIndicator(provider), SentimentAnalysisIndicator(provider), DeveloperActivityIndicator(provider)]
+    runner = IndicatorRunner()
+    # Run technical
+    tech_results = runner.run_all_indicators(tech, symbol)
+    # Run social
+    social_results = runner.run_all_indicators(social, symbol)
+    # Print
+    print("\n=== TECHNICAL INDICATORS ===")
+    for r in tech_results: print_result(r) if verbose else print(f"{r.indicator_name}: {r.score:.2f}/{r.max_score:.2f}")
+    print("\n=== SOCIAL INDICATORS ===")
+    for r in social_results: print_result(r) if verbose else print(f"{r.indicator_name}: {r.score:.2f}/{r.max_score:.2f}")
+    return tech_results, social_results
 
 
 def main():
-    """Main entry point"""
-    # Load environment variables
-    load_dotenv()
-    
-    # Set up logging
-    setup_logging()
-    
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Test cryptocurrency indicators')
-    parser.add_argument('symbol', help='Cryptocurrency symbol (e.g., BTC, ETH)')
-    parser.add_argument('--mock', action='store_true', help='Use mock data instead of real API')
-    parser.add_argument('--indicator', help='Run only this specific indicator')
+    # Ensure base tables exist (coins)
+    create_tables()
+    parser = argparse.ArgumentParser(description='PumpAndDump cryptocurrency analysis')
+    sub = parser.add_subparsers(dest='cmd')
+    an = sub.add_parser('analyze', help='Run analysis')
+    an.add_argument('symbol', help='Symbol(s), comma-separated')
+    an.add_argument('--verbose', action='store_true', help='Detailed output')
+    an.add_argument('--save', action='store_true', help='Save to DB')
+    rp = sub.add_parser('report', help='View saved')
+    rp.add_argument('--symbol', help='Symbol to filter')
     args = parser.parse_args()
-    
-    # Create data provider
-    if args.mock:
-        data_provider = MockDataProvider()
-        print(f"Using MOCK data provider for {args.symbol}")
+
+    create_analysis_table()
+    create_social_table()
+
+    if args.cmd == 'analyze':
+        tech, social = run_analysis(args.symbol, args.verbose)
+        if args.save:
+            save_analysis_results(tech, args.symbol)
+            save_social_results(social, args.symbol)
+    elif args.cmd == 'report':
+        ta = get_latest_analysis(symbol=args.symbol)
+        sa = get_latest_social(symbol=args.symbol)
+        print("\n=== ANALYSIS HISTORY ===")
+        print(tabulate([list(t.values()) for t in ta], headers=ta[0].keys() if ta else []))
+        print("\n=== SOCIAL HISTORY ===")
+        print(tabulate([list(s.values()) for s in sa], headers=sa[0].keys() if sa else []))
     else:
-        data_provider = CoinGeckoProvider()
-        print(f"Using CoinGecko data provider for {args.symbol}")
-    
-    # Create indicators
-    all_indicators = create_indicators(data_provider)
-    
-    # Filter indicators if specified
-    if args.indicator:
-        indicators = [ind for ind in all_indicators if ind.name.lower() == args.indicator.lower()]
-        if not indicators:
-            print(f"Error: Indicator '{args.indicator}' not found")
-            print(f"Available indicators: {', '.join(ind.name for ind in all_indicators)}")
-            return
-    else:
-        indicators = all_indicators
-    
-    # Create runner
-    runner = IndicatorRunner()
-    
-    # Run indicators
-    results = runner.run_all_indicators(indicators, args.symbol)
-    
-    # Print results
-    for result in results:
-        print_result(result)
-    
-    # Print summary
-    print("\n" + "=" * 50)
-    print("SUMMARY")
-    print("=" * 50)
-    
-    total_score = sum(r.score for r in results)
-    max_score = sum(r.max_score for r in results)
-    
-    print(f"Symbol: {args.symbol}")
-    print(f"Total Score: {total_score:.2f}/{max_score:.2f} ({total_score/max_score*100:.1f}%)")
-    
-    for result in results:
-        print(f"  {result.indicator_name}: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+        parser.print_help()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
