@@ -1,0 +1,103 @@
+# PumpAndDump - Cryptocurrency Analysis Tool
+
+A comprehensive cryptocurrency analysis tool that evaluates various technical indicators to provide investment recommendations.
+
+## Features
+
+- Analyzes cryptocurrencies using multiple technical indicators
+- Saves analysis results to a PostgreSQL database
+- Provides historical data viewing and comparison
+- Supports multiple cryptocurrencies in a single analysis
+- Caches API responses for improved performance
+
+## Usage
+
+### Setup
+
+1. Make sure you have Docker and Docker Compose installed
+2. Clone this repository
+3. Configure your environment variables in `.env` file
+4. Build and start the containers:
+
+```bash
+docker-compose up -d
+```
+
+### Analyzing Cryptocurrencies
+
+Use the `analyzer.py` script to analyze one or more cryptocurrencies:
+
+```bash
+# Basic usage - analyze Bitcoin
+python src/analyzer.py BTC
+
+# Analyze multiple cryptocurrencies
+python src/analyzer.py BTC,ETH,SOL,DOGE
+
+# Show detailed analysis information
+python src/analyzer.py BTC --verbose
+
+# Save results to database
+python src/analyzer.py BTC --save
+
+# Use mock data for testing
+python src/analyzer.py BTC --mock
+```
+
+### Viewing Saved Analysis Results
+
+Use the `report.py` script to view previously saved analysis results:
+
+```bash
+# View all recent analyses
+python src/report.py
+
+# Filter by specific cryptocurrency
+python src/report.py --symbol BTC
+
+# Limit to analyses from the last N days
+python src/report.py --days 7
+
+# Limit number of results
+python src/report.py --limit 5
+
+# Combine filters
+python src/report.py --symbol ETH --days 30 --limit 10
+```
+
+## Technical Indicators
+
+The tool evaluates cryptocurrencies based on these indicators:
+
+1. **Trading Volume** (15 points)
+   - Measures 24h trading volume with full score for volume ≥ $1M
+
+2. **Liquidity** (15 points)
+   - Evaluates bid/ask spread and market depth
+   - Targets spread of 0.5% or less for full points
+
+3. **Whale Transactions** (10 points)
+   - Analyzes volume spikes and price patterns
+   - Detects accumulation/distribution patterns
+
+4. **Token Distribution** (10 points)
+   - Evaluates circulation ratio, Gini coefficient, holder diversity
+   - Rewards more equal distribution and active communities
+
+5. **Pre-Sale Vesting** (10 points)
+   - Analyzes upcoming token unlocks and their market impact
+   - Lower score for imminent large unlocks
+
+6. **Smart Contract Audit** (10 points)
+   - Assesses contract security, audits, and vulnerabilities
+   - Higher score for multiple audits by reputable firms
+
+## Recommendations
+
+Based on the total score percentage, the tool provides one of these recommendations:
+
+- **STRONG BUY** (≥80%): High potential for growth
+- **BUY** (≥70%): Good potential for growth
+- **HOLD** (≥60%): Moderate potential
+- **WATCH** (≥50%): Some concerns
+- **AVOID** (<50%): Significant concerns
