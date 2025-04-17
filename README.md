@@ -37,7 +37,7 @@ python analyzer.py analyze BTC
 # Analyze multiple cryptocurrencies
 python analyzer.py analyze BTC,ETH,SOL,DOGE
 
-# Show detailed analysis information
+# Show detailed analysis information (displays all indicator metrics)
 python analyzer.py analyze BTC --verbose
 
 # Save results to database
