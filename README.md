@@ -26,47 +26,47 @@ docker-compose up -d
 
 ### Using the Analyzer Tool
 
-The `src/main.py` script provides two main commands: `analyze` and `report`.
+The `main.py` script provides two main commands: `analyze` and `report`.
 
 #### Analyzing Cryptocurrencies
 
 ```bash
 # Basic usage - analyze Bitcoin (includes both technical and social indicators)
-python src/main.py analyze BTC
+python main.py analyze BTC
 
 # Analyze multiple cryptocurrencies
-python src/main.py analyze BTC,ETH,SOL,DOGE
+python main.py analyze BTC,ETH,SOL,DOGE
 
 # Analyze with verbose output
-python src/main.py analyze BTC --verbose
+python main.py analyze BTC --verbose
 
 # Save analysis results to database
-python src/main.py analyze BTC --save
+python main.py analyze BTC --save
 ```
 
 #### Viewing Saved Analysis Results
 
 ```bash
 # View all analyses (both technical and social)
-python src/main.py report
+python main.py report
 
 # View only technical indicators
-python src/main.py report --type technical
+python main.py report --type technical
 
 # View only social indicators
-python src/main.py report --type social
+python main.py report --type social
 
 # Filter by specific cryptocurrency
-python src/main.py report --symbol BTC
+python main.py report --symbol BTC
 
 # Limit to analyses from the last N days
-python Analyse/main.py report --days 7
+python main.py report --days 7
 
 # Limit number of results
-python Analyse/main.py report --limit 5
+python main.py report --limit 5
 
 # Combine filters
-python Analyse/main.py report --symbol ETH --days 30 --limit 10 --type social
+python main.py report --symbol ETH --days 30 --limit 10 --type social
 ```
 
 ## Indicators

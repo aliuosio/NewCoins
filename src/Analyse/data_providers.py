@@ -84,6 +84,103 @@ class CoinGeckoProvider(BaseDataProvider):
             self._base_url = "https://api.coingecko.com/api/v3"
             self._logger.info(f"Using CoinGecko API with free tier access (rate limited)")
     
+    def _respect_rate_limit(self) -> None:
+        """
+        Ensure we respect the rate limit by waiting if needed
+        """
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        
+        if time_since_last < self._rate_limit_delay:
+            wait_time = self._rate_limit_delay - time_since_last
+            self._logger.debug(f"Waiting {wait_time:.2f}s to respect rate limit")
+            time.sleep(wait_time)
+    
+    def _get_cache_key(self, url: str, params: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Generate a unique cache key for a request
+        
+        Args:
+            url: API endpoint URL
+            params: Query parameters
+            
+        Returns:
+            Cache key string
+        """
+        # Create a string representation of the request
+        request_str = url
+        if params:
+            request_str += json.dumps(params, sort_keys=True)
+        
+        # Generate a hash of the request string
+        return hashlib.md5(request_str.encode()).hexdigest()
+    
+    def _get_from_cache(self, cache_key: str) -> Optional[Union[requests.Response, Dict[str, Any]]]:
+        """
+        Get data from cache if it exists and is not expired
+        
+        Args:
+            cache_key: Cache key
+            
+        Returns:
+            Cached data or None if not found or expired
+        """
+        cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
+        
+        # Check if cache file exists
+        if not os.path.exists(cache_file):
+            return None
+        
+        # Check if cache is expired
+        if time.time() - os.path.getmtime(cache_file) > self._cache_duration:
+            return None
+        
+        try:
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+            
+            # If this is a response cache, create a mock response object
+            if '_url' in cached_data:
+                mock_response = requests.Response()
+                mock_response.status_code = 200
+                mock_response._content = json.dumps(cached_data['data']).encode()
+                mock_response.encoding = 'utf-8'
+                mock_response.url = cached_data.get('_url', '')
+                return mock_response
+            
+            # Otherwise return the cached data directly
+            return cached_data
+        except Exception as e:
+            self._logger.error(f"Error loading cache for {cache_key}: {str(e)}")
+            return None
+    
+    def _cache_response(self, cache_key: str, response: Union[requests.Response, Dict[str, Any]]) -> None:
+        """
+        Cache a response
+        
+        Args:
+            cache_key: Cache key
+            response: Response object or dictionary to cache
+        """
+        cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
+        
+        try:
+            # If this is a response object, extract its data
+            if isinstance(response, requests.Response):
+                data = {
+                    '_url': response.url,
+                    'data': response.json()
+                }
+            else:
+                data = response
+            
+            with open(cache_file, 'w') as f:
+                json.dump(data, f)
+            
+            self._logger.debug(f"Cached data for {cache_key}")
+        except Exception as e:
+            self._logger.error(f"Error caching data for {cache_key}: {str(e)}")
+    
     def get_vesting_data(self, coin_id: str) -> Dict[str, Any]:
         """
         Get vesting schedule and token unlock data for a cryptocurrency
@@ -96,97 +193,25 @@ class CoinGeckoProvider(BaseDataProvider):
         """
         try:
             # For real implementation, we would fetch this from CoinGecko or another API
-            # For now, we'll generate simulated data based on the coin ID
-            
-            # Default values (low risk)
-            upcoming_unlocks = []
-            days_to_next_unlock = 999
-            next_unlock_percentage = 0.0
-            total_unlocks_30_days = 0
-            total_percentage_30_days = 0.0
-            risk_level = "None"
-            estimated_market_impact = 0.0
-            unlock_to_volume_ratio = 0.0
-            
-            # For newer coins or tokens with known vesting schedules
-            # Generate some realistic data based on coin ID hash
-            if coin_id not in ['bitcoin', 'ethereum', 'litecoin', 'monero']:
-                # Use hash of coin_id to generate consistent but random-looking data
-                import hashlib
-                hash_val = int(hashlib.md5(coin_id.encode()).hexdigest(), 16)
-                
-                # Determine if this coin has upcoming unlocks
-                has_unlocks = (hash_val % 10) > 3  # 60% chance of having unlocks
-                
-                if has_unlocks:
-                    # Generate unlock data
-                    num_unlocks = (hash_val % 5) + 1  # 1-5 upcoming unlocks
-                    days_to_next = (hash_val % 90) + 1  # 1-90 days to next unlock
-                    next_percentage = ((hash_val % 15) + 1) / 100  # 1-15% unlock
-                    
-                    # Calculate 30-day metrics
-                    unlocks_30_days = sum(1 for i in range(num_unlocks) if 
-                                        ((hash_val + i*10) % 90) < 30)
-                    percentage_30_days = sum(((hash_val + i*10) % 15 + 1) / 100 
-                                            for i in range(unlocks_30_days))
-                    
-                    # Generate unlock list
-                    for i in range(num_unlocks):
-                        days_offset = ((hash_val + i*10) % 90) + 1
-                        percentage = ((hash_val + i*10) % 15 + 1) / 100
-                        unlock_date = (datetime.now() + timedelta(days=days_offset)).strftime('%Y-%m-%d')
-                        upcoming_unlocks.append({
-                            'date': unlock_date,
-                            'percentage': percentage * 100,  # Convert to percentage
-                            'tokens': int(percentage * 10000000)  # Simulated token amount
-                        })
-                    
-                    # Set return values
-                    days_to_next_unlock = days_to_next
-                    next_unlock_percentage = next_percentage * 100  # Convert to percentage
-                    total_unlocks_30_days = unlocks_30_days
-                    total_percentage_30_days = percentage_30_days * 100  # Convert to percentage
-                    
-                    # Calculate market impact and risk level
-                    market_data = self._get_coin_data(coin_id).get('market_data', {})
-                    volume = market_data.get('total_volume', {}).get('usd', 0)
-                    market_cap = market_data.get('market_cap', {}).get('usd', 0)
-                    
-                    if volume > 0 and market_cap > 0:
-                        # Estimate market impact based on unlock size relative to volume
-                        unlock_size = next_percentage * market_cap
-                        unlock_to_volume_ratio = unlock_size / volume if volume > 0 else 999
-                        estimated_market_impact = min(100, unlock_to_volume_ratio * 30)  # Cap at 100%
-                        
-                        # Determine risk level
-                        if unlock_to_volume_ratio > 0.5 or percentage_30_days > 0.15:
-                            risk_level = "High"
-                        elif unlock_to_volume_ratio > 0.2 or percentage_30_days > 0.08:
-                            risk_level = "Medium"
-                        elif unlock_to_volume_ratio > 0.1 or percentage_30_days > 0.03:
-                            risk_level = "Low"
-                        else:
-                            risk_level = "Minimal"
-            
             return {
-                'upcoming_unlocks': upcoming_unlocks,
-                'days_to_next_unlock': days_to_next_unlock,
-                'next_unlock_percentage': next_unlock_percentage,
-                'total_unlocks_30_days': total_unlocks_30_days,
-                'total_percentage_30_days': total_percentage_30_days,
-                'risk_level': risk_level,
-                'estimated_market_impact': estimated_market_impact,
-                'unlock_to_volume_ratio': unlock_to_volume_ratio
+                'upcoming_unlocks': [],
+                'days_to_next_unlock': 0,
+                'next_unlock_percentage': 0.0,
+                'total_unlocks_30_days': 0,
+                'total_percentage_30_days': 0.0,
+                'risk_level': "Unknown",
+                'estimated_market_impact': 0.0,
+                'unlock_to_volume_ratio': 0.0
             }
         except Exception as e:
             self._logger.error(f"Error fetching vesting data for {coin_id}: {str(e)}")
             return {
                 'upcoming_unlocks': [],
-                'days_to_next_unlock': 999,
+                'days_to_next_unlock': 0,
                 'next_unlock_percentage': 0.0,
                 'total_unlocks_30_days': 0,
                 'total_percentage_30_days': 0.0,
-                'risk_level': "None",
+                'risk_level': "Unknown",
                 'estimated_market_impact': 0.0,
                 'unlock_to_volume_ratio': 0.0,
                 'error': str(e)
@@ -204,105 +229,17 @@ class CoinGeckoProvider(BaseDataProvider):
         """
         try:
             # For real implementation, we would fetch this from CoinGecko or another API
-            # For now, we'll generate simulated data based on the coin ID
-            
-            # Default values (low security score)
-            audits = []
-            contract_age_days = 0
-            critical_vulnerabilities = 0
-            major_vulnerabilities = 0
-            vulnerabilities_fixed = 0
-            code_quality_score = 0.0
-            security_practices_score = 0.0
-            risk_level = "Unknown"
-            exploit_probability = 0.0
-            top_vulnerabilities = []
-            
-            # For coins with smart contracts
-            # Generate some realistic data based on coin ID hash
-            if coin_id not in ['bitcoin', 'litecoin', 'monero']:
-                # Use hash of coin_id to generate consistent but random-looking data
-                import hashlib
-                hash_val = int(hashlib.md5(coin_id.encode()).hexdigest(), 16)
-                
-                # Determine contract age
-                contract_age_days = (hash_val % 1000) + 30  # 30-1030 days old
-                
-                # Determine if this coin has audits
-                has_audits = (hash_val % 10) > 2  # 70% chance of having audits
-                
-                if has_audits:
-                    # Generate audit data
-                    num_audits = (hash_val % 3) + 1  # 1-3 audits
-                    audit_firms = [
-                        'certik', 'hacken', 'omniscia', 'peckshield', 'slowmist', 
-                        'techrate', 'dedaub', 'quantstamp', 'trail of bits', 'consensys'
-                    ]
-                    
-                    for i in range(num_audits):
-                        firm_index = (hash_val + i*10) % len(audit_firms)
-                        days_ago = (hash_val + i*20) % 365
-                        audit_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
-                        score = 7.0 + ((hash_val + i*30) % 30) / 10  # 7.0-10.0 score
-                        
-                        audits.append({
-                            'firm': audit_firms[firm_index],
-                            'date': audit_date,
-                            'score': score
-                        })
-                
-                # Vulnerability data
-                critical_vulnerabilities = (hash_val % 4)  # 0-3 critical
-                major_vulnerabilities = (hash_val % 5)  # 0-4 major
-                vulnerabilities_fixed = (hash_val % (critical_vulnerabilities + major_vulnerabilities + 1))
-                
-                # Code quality metrics
-                code_quality_score = 3.0 + ((hash_val % 70) / 10)  # 3.0-10.0 score
-                security_practices_score = 2.0 + ((hash_val % 80) / 10)  # 2.0-10.0 score
-                
-                # Risk assessment
-                unfixed_vulnerabilities = critical_vulnerabilities + major_vulnerabilities - vulnerabilities_fixed
-                audit_count_factor = min(1.0, len(audits) * 0.3)  # More audits = lower risk
-                age_factor = min(1.0, contract_age_days / 365)  # Older = lower risk (more battle-tested)
-                
-                # Calculate exploit probability
-                exploit_probability = (unfixed_vulnerabilities * 10) * (1 - audit_count_factor) * (1 - age_factor * 0.5)
-                exploit_probability = min(100, max(0, exploit_probability))  # Cap between 0-100%
-                
-                # Determine risk level
-                if exploit_probability > 25:
-                    risk_level = "High"
-                elif exploit_probability > 10:
-                    risk_level = "Medium"
-                elif exploit_probability > 5:
-                    risk_level = "Low"
-                else:
-                    risk_level = "Minimal"
-                
-                # Generate top vulnerabilities
-                potential_vulnerabilities = [
-                    'reentrancy', 'arithmetic overflow/underflow', 'front-running', 
-                    'timestamp dependence', 'gas optimization', 'signature replay',
-                    'access control', 'uninitialized storage', 'delegatecall misuse',
-                    'flash loan attacks', 'oracle manipulation'
-                ]
-                
-                num_vulnerabilities = min(3, unfixed_vulnerabilities)
-                for i in range(num_vulnerabilities):
-                    vuln_index = (hash_val + i*40) % len(potential_vulnerabilities)
-                    top_vulnerabilities.append(potential_vulnerabilities[vuln_index])
-            
             return {
-                'audits': audits,
-                'contract_age_days': contract_age_days,
-                'critical_vulnerabilities': critical_vulnerabilities,
-                'major_vulnerabilities': major_vulnerabilities,
-                'vulnerabilities_fixed': vulnerabilities_fixed,
-                'code_quality_score': code_quality_score,
-                'security_practices_score': security_practices_score,
-                'risk_level': risk_level,
-                'exploit_probability': exploit_probability,
-                'top_vulnerabilities': top_vulnerabilities
+                'audits': [],
+                'contract_age_days': 0,
+                'critical_vulnerabilities': 0,
+                'major_vulnerabilities': 0,
+                'vulnerabilities_fixed': 0,
+                'code_quality_score': 0.0,
+                'security_practices_score': 0.0,
+                'risk_level': "Unknown",
+                'exploit_probability': 0.0,
+                'top_vulnerabilities': []
             }
         except Exception as e:
             self._logger.error(f"Error fetching audit data for {coin_id}: {str(e)}")
@@ -347,41 +284,44 @@ class CoinGeckoProvider(BaseDataProvider):
             }
         
         try:
-            # Get market data
-            coin_data = self._get_coin_data(coin_id)
-            market_data = coin_data.get('market_data', {})
-            community_data = coin_data.get('community_data', {})
+            # Check if we have cached comprehensive data for this coin
+            cache_key = f"comprehensive_data_{coin_id}"
+            cached_data = self._get_from_cache(cache_key)
             
-            # Get historical data for price and volume
+            if cached_data:
+                self._logger.debug(f"Using cached comprehensive data for {symbol}")
+                return cached_data
+            
+            # Get comprehensive coin data
+            coin_data = self._get_coin_data(coin_id)
+            
+            # Get market chart data
             market_chart = self._get_market_chart(coin_id)
             
-            # Calculate spread (approximation based on high/low)
-            current_price = market_data.get('current_price', {}).get('usd', 0)
-            high_24h = market_data.get('high_24h', {}).get('usd', 0)
-            low_24h = market_data.get('low_24h', {}).get('usd', 0)
+            # Extract relevant data
+            market_data = coin_data.get('market_data', {})
+            price_usd = market_data.get('current_price', {}).get('usd', 0)
+            market_cap = market_data.get('market_cap', {}).get('usd', 0)
+            total_volume_24h = market_data.get('total_volume', {}).get('usd', 0)
             
-            # Calculate spread as percentage of current price
-            spread = 0.01  # Default 1%
-            if current_price > 0 and high_24h > 0 and low_24h > 0:
-                spread = (high_24h - low_24h) / current_price
+            # Get community data
+            community_data = coin_data.get('community_data', {})
             
-            # Return comprehensive data
-            return {
+            # Create result
+            result = {
                 'symbol': symbol,
                 'coin_id': coin_id,
-                'price_usd': current_price,
-                'market_cap': market_data.get('market_cap', {}).get('usd', 0),
-                'total_volume_24h': market_data.get('total_volume', {}).get('usd', 0),
-                'base_currency': symbol,
-                'spread': spread,
-                'prices': market_chart.get('prices', []),
-                'volumes': market_chart.get('total_volumes', []),
-                'coin_data': {
-                    'market_data': market_data,
-                    'community_data': community_data
-                },
-                'market_chart': True
+                'price_usd': price_usd,
+                'market_cap': market_cap,
+                'total_volume_24h': total_volume_24h,
+                'market_chart': market_chart,
+                'community_data': community_data
             }
+            
+            # Cache the comprehensive data
+            self._cache_response(cache_key, result)
+            
+            return result
         except Exception as e:
             self._logger.error(f"Error fetching comprehensive data for {symbol}: {str(e)}")
             return {
@@ -570,140 +510,39 @@ class CoinGeckoProvider(BaseDataProvider):
                 self._cache_response(cache_key, response)
                 
                 return response
-            else:
-                raise
-    
-    def _respect_rate_limit(self):
-        """
-        Ensure we don't exceed the rate limit by adding delay if needed
-        """
-        # Calculate how long to wait
-        elapsed = time.time() - self._last_request_time
-        if elapsed < self._rate_limit_delay:
-            wait_time = self._rate_limit_delay - elapsed
-            self._logger.debug(f"Rate limit: waiting {wait_time:.2f} seconds")
-            time.sleep(wait_time)
-    
-    def _get_cache_key(self, url: str, params: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Generate a unique cache key for a request
-        
-        Args:
-            url: API endpoint URL
-            params: Query parameters
             
-        Returns:
-            Cache key string
-        """
-        # Create a string representation of the request
-        request_str = url
-        if params:
-            request_str += json.dumps(params, sort_keys=True)
-        
-        # Generate a hash of the request string
-        return hashlib.md5(request_str.encode()).hexdigest()
-    
-    def _get_from_cache(self, cache_key: str) -> Optional[requests.Response]:
-        """
-        Get a response from cache if it exists and is not expired
-        
-        Args:
-            cache_key: Cache key
-            
-        Returns:
-            Cached response or None if not found or expired
-        """
-        cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
-        
-        # Check if cache file exists
-        if not os.path.exists(cache_file):
-            return None
-        
-        # Check if cache is expired
-        file_age = time.time() - os.path.getmtime(cache_file)
-        if file_age > self._cache_duration:
-            self._logger.debug(f"Cache expired for {cache_key} (age: {file_age:.1f}s)")
-            return None
-        
-        try:
-            # Load cached data
-            with open(cache_file, 'r') as f:
-                cached_data = json.load(f)
-            
-            # Create a mock response object
-            mock_response = requests.Response()
-            mock_response.status_code = 200
-            mock_response._content = json.dumps(cached_data).encode()
-            mock_response.encoding = 'utf-8'
-            mock_response.url = cached_data.get('_url', '')
-            
-            return mock_response
+            # For other HTTP errors, raise the exception
+            raise e
         except Exception as e:
-            self._logger.error(f"Error loading cache for {cache_key}: {str(e)}")
+            self._logger.error(f"Error making API request: {str(e)}")
             return None
-    
-    def _cache_response(self, cache_key: str, response: requests.Response) -> None:
+
+    def _cache_response(self, cache_key: str, response: Union[requests.Response, Dict[str, Any]]) -> None:
         """
         Cache a response
         
         Args:
             cache_key: Cache key
-            response: Response to cache
+            response: Response object or dictionary to cache
         """
+        cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
+
         try:
-            # Parse response JSON
-            response_data = response.json()
-            
-            # Add metadata
-            response_data['_url'] = response.url
-            response_data['_cached_at'] = time.time()
-            
-            # Write to cache file
-            cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
+            # If this is a response object, extract its data
+            if isinstance(response, requests.Response):
+                data = {
+                    '_url': response.url,
+                    'data': response.json()
+                }
+            else:
+                data = response
+
             with open(cache_file, 'w') as f:
-                json.dump(response_data, f, indent=2)
-                
-            self._logger.debug(f"Cached response for {cache_key}")
+                json.dump(data, f, indent=2)
+
+            self._logger.debug(f"Cached data for {cache_key}")
         except Exception as e:
-            self._logger.error(f"Error caching response for {cache_key}: {str(e)}")
+            self._logger.error(f"Error caching data for {cache_key}: {str(e)}")
 
 
-class MockDataProvider(BaseDataProvider):
-    """Mock data provider for testing"""
-    
-    def __init__(self, mock_data: Dict[str, Dict[str, Any]] = None):
-        """
-        Initialize the mock data provider
-        
-        Args:
-            mock_data: Dictionary mapping symbols to their mock data
-        """
-        super().__init__("mock")
-        self._mock_data = mock_data or {}
-    
-    def _fetch_data(self, symbol: str) -> Dict[str, Any]:
-        """
-        Return mock data for the symbol
-        
-        Args:
-            symbol: Symbol of the cryptocurrency
-            
-        Returns:
-            Mock data for the symbol
-        """
-        # Normalize symbol
-        symbol = symbol.upper()
-        
-        # Return mock data if available, otherwise return default data
-        if symbol in self._mock_data:
-            return self._mock_data[symbol]
-        
-        # Default mock data
-        return {
-            'symbol': symbol,
-            'coin_id': f"mock-{symbol.lower()}",
-            'price_usd': 1000.0,
-            'market_cap': 10000000.0,
-            'total_volume_24h': 5000000.0,
-            'base_currency': symbol
-        }
+

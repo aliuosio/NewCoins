@@ -38,12 +38,12 @@ def create_social_table():
         logger.error(f"Error creating social indicators table: {e}")
         raise
 
-def save_social_results(results: List[Dict[str, Any]], symbol: str):
+def save_social_results(results: List, symbol: str):
     """
     Save the social indicators results to the database.
     
     Args:
-        results: List of social indicator results
+        results: List of social indicator results (IndicatorResult objects)
         symbol: Cryptocurrency symbol
     """
     if not results:
@@ -54,21 +54,28 @@ def save_social_results(results: List[Dict[str, Any]], symbol: str):
     
     try:
         # Calculate overall social score
-        total_score = sum(r.get('score', 0) for r in results)
+        total_score = sum(r.score for r in results)
         
         # Prepare indicator-specific data
         indicator_data = {}
         raw_data = {}
         
         for result in results:
-            indicator_name = result.get('indicator_name')
-            indicator_data[f"{indicator_name}_score"] = result.get('score', 0)
+            indicator_name = result.indicator_name
+            indicator_data[f"{indicator_name}_score"] = result.score
             
             # Store raw details for future reference
-            raw_data[indicator_name] = result.get('details', {})
+            raw_data[indicator_name] = {
+                'score': result.score,
+                'max_score': result.max_score,
+                'details': result.details,
+                'execution_time_ms': result.execution_time_ms,
+                'success': result.success,
+                'error': result.error
+            }
         
         # Calculate total social score
-        total_social_score = sum(r.get('score', 0) for r in results)
+        total_social_score = sum(r.score for r in results)
         
         # Prepare the insert data
         insert_data = {

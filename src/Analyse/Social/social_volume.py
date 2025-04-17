@@ -38,7 +38,7 @@ class SocialVolumeIndicator(BaseIndicator):
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate the social volume score based on mentions and discussions.
+        Calculate the social volume score based on social media metrics.
         
         Args:
             symbol: Cryptocurrency symbol
@@ -47,40 +47,46 @@ class SocialVolumeIndicator(BaseIndicator):
         Returns:
             Dictionary with score and details
         """
-        # Extract social volume metrics from data
-        mentions_24h = data.get('mentions_24h', 0)
-        mentions_change = data.get('mentions_change_pct', 0)
-        platforms_count = data.get('active_platforms_count', 0)
+        # Extract social metrics from data
+        community_data = data.get('community_data', {})
         
-        # Base score based on 24h mentions
-        if mentions_24h >= 10000:
+        twitter_followers = community_data.get('twitter_followers', 0)
+        reddit_subscribers = community_data.get('reddit_subscribers', 0)
+        telegram_users = community_data.get('telegram_users', 0)
+        
+        # Calculate total social reach
+        total_social_reach = twitter_followers + reddit_subscribers + telegram_users
+        
+        # Calculate platform diversity (bonus for presence across multiple platforms)
+        active_platforms = sum(1 for count in [twitter_followers, reddit_subscribers, telegram_users] if count > 0)
+        
+        # Base score based on total social reach
+        if total_social_reach >= 1000000:  # 1M+ total reach
             base_score = 10.0
-        elif mentions_24h >= 5000:
+        elif total_social_reach >= 500000:  # 500K-1M
             base_score = 8.0
-        elif mentions_24h >= 1000:
+        elif total_social_reach >= 100000:  # 100K-500K
             base_score = 6.0
-        elif mentions_24h >= 500:
+        elif total_social_reach >= 50000:   # 50K-100K
             base_score = 4.0
-        elif mentions_24h >= 100:
+        elif total_social_reach >= 10000:   # 10K-50K
             base_score = 2.0
         else:
             base_score = 0.0
         
-        # Bonus points for increasing trend
-        trend_bonus = 1.0 if mentions_change >= 20 else 0.0
-        
-        # Bonus points for cross-platform presence
-        platform_bonus = 1.0 if platforms_count >= 3 else 0.0
+        # Platform diversity bonus (1 point for 2+ platforms, 2 points for 3 platforms)
+        platform_bonus = min(2, active_platforms - 1)
         
         # Calculate final score (capped at max_score)
-        final_score = min(base_score + trend_bonus + platform_bonus, self.max_score)
+        final_score = min(base_score + platform_bonus, self.max_score)
         
         return {
             'score': final_score,
-            'mentions_24h': mentions_24h,
-            'mentions_change_pct': mentions_change,
-            'active_platforms_count': platforms_count,
+            'total_social_reach': total_social_reach,
+            'twitter_followers': twitter_followers,
+            'reddit_subscribers': reddit_subscribers,
+            'telegram_users': telegram_users,
+            'active_platforms_count': active_platforms,
             'base_score': base_score,
-            'trend_bonus': trend_bonus,
             'platform_bonus': platform_bonus
         }

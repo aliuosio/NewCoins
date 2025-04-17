@@ -39,52 +39,61 @@ class SentimentAnalysisIndicator(BaseIndicator):
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate the sentiment analysis score based on social media sentiment.
+        Calculate the sentiment analysis score based on social media metrics.
         
         Args:
             symbol: Cryptocurrency symbol
-            data: Data dictionary containing sentiment metrics
+            data: Data dictionary containing social metrics
             
         Returns:
             Dictionary with score and details
         """
-        # Extract sentiment metrics from data
-        positive_pct = data.get('sentiment_positive_pct', 0)
-        negative_pct = data.get('sentiment_negative_pct', 0)
-        neutral_pct = data.get('sentiment_neutral_pct', 0)
-        sentiment_change = data.get('sentiment_change_pct', 0)
+        # Extract social metrics from data
+        community_data = data.get('community_data', {})
+        developer_data = data.get('developer_data', {})
         
-        # Base score based on positive sentiment percentage
-        if positive_pct >= 80:
+        twitter_followers = community_data.get('twitter_followers', 0)
+        reddit_subscribers = community_data.get('reddit_subscribers', 0)
+        reddit_active_accounts = community_data.get('reddit_active_accounts', 0)
+        github_stars = developer_data.get('stars', 0)
+        
+        # Calculate total social reach
+        total_social_reach = twitter_followers + reddit_subscribers
+        
+        # Calculate engagement rate
+        engagement_rate = (reddit_active_accounts / max(reddit_subscribers, 1)) if reddit_subscribers else 0
+        
+        # Base score based on engagement and reach
+        base_score = 0.0
+        if engagement_rate >= 0.1:  # 10% or higher engagement
             base_score = 10.0
-        elif positive_pct >= 70:
+        elif engagement_rate >= 0.05:  # 5-10% engagement
             base_score = 8.0
-        elif positive_pct >= 60:
+        elif engagement_rate >= 0.02:  # 2-5% engagement
             base_score = 6.0
-        elif positive_pct >= 40:
+        elif engagement_rate >= 0.01:  # 1-2% engagement
             base_score = 4.0
-        elif positive_pct >= 30:
+        elif engagement_rate > 0:  # Any engagement
             base_score = 2.0
-        else:
-            base_score = 0.0
         
-        # Adjust score based on sentiment trend
-        if sentiment_change >= 10:
-            trend_adjustment = 1.0
-        elif sentiment_change <= -10:
-            trend_adjustment = -1.0
-        else:
-            trend_adjustment = 0.0
+        # Developer activity bonus (1-2 points)
+        developer_bonus = 0.0
+        if github_stars >= 10000:  # 10K+ stars
+            developer_bonus = 2.0
+        elif github_stars >= 1000:  # 1K-10K stars
+            developer_bonus = 1.0
         
-        # Calculate final score (capped at max_score and minimum 0)
-        final_score = max(0, min(base_score + trend_adjustment, self.max_score))
+        # Calculate final score (capped at max_score)
+        final_score = min(base_score + developer_bonus, self.max_score)
         
         return {
             'score': final_score,
-            'sentiment_positive_pct': positive_pct,
-            'sentiment_negative_pct': negative_pct,
-            'sentiment_neutral_pct': neutral_pct,
-            'sentiment_change_pct': sentiment_change,
+            'total_social_reach': total_social_reach,
+            'twitter_followers': twitter_followers,
+            'reddit_subscribers': reddit_subscribers,
+            'reddit_active_accounts': reddit_active_accounts,
+            'github_stars': github_stars,
+            'engagement_rate': engagement_rate,
             'base_score': base_score,
-            'trend_adjustment': trend_adjustment
+            'developer_bonus': developer_bonus
         }

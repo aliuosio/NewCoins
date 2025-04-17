@@ -43,54 +43,59 @@ class DeveloperActivityIndicator(BaseIndicator):
         
         Args:
             symbol: Cryptocurrency symbol
-            data: Data dictionary containing developer metrics
+            data: Data dictionary containing GitHub metrics
             
         Returns:
             Dictionary with score and details
         """
-        # Extract developer metrics from data
-        commits_4w = data.get('github_commits_4w', 0)
-        contributors = data.get('github_contributors', 0)
-        stars = data.get('github_stars', 0)
-        forks = data.get('github_forks', 0)
+        # Extract developer data from data
+        developer_data = data.get('developer_data', {})
         
-        # Score based on commits in last 4 weeks
-        if commits_4w >= 100:
-            commit_score = 5.0
-        elif commits_4w >= 50:
-            commit_score = 4.0
-        elif commits_4w >= 20:
-            commit_score = 3.0
-        elif commits_4w >= 10:
-            commit_score = 2.0
-        elif commits_4w >= 5:
-            commit_score = 1.0
-        else:
-            commit_score = 0.0
+        # Extract metrics from developer data
+        forks = developer_data.get('forks', 0)
+        stars = developer_data.get('stars', 0)
+        subscribers = developer_data.get('subscribers', 0)
+        total_issues = developer_data.get('total_issues', 0)
+        closed_issues = developer_data.get('closed_issues', 0)
+        pull_requests_merged = developer_data.get('pull_requests_merged', 0)
+        pull_request_contributors = developer_data.get('pull_request_contributors', 0)
+        commit_count_4_weeks = developer_data.get('commit_count_4_weeks', 0)
         
-        # Score based on number of contributors
-        if contributors >= 20:
-            contributor_score = 5.0
-        elif contributors >= 10:
-            contributor_score = 4.0
-        elif contributors >= 5:
-            contributor_score = 3.0
-        elif contributors >= 3:
-            contributor_score = 2.0
-        elif contributors >= 1:
-            contributor_score = 1.0
-        else:
-            contributor_score = 0.0
+        # Calculate issue resolution rate
+        issue_resolution_rate = (closed_issues / max(total_issues, 1)) if total_issues else 0
+        
+        # Calculate activity level
+        activity_level = min(10, (commit_count_4_weeks / 20) + (pull_request_contributors / 5))
+        
+        # Calculate community engagement
+        community_engagement = min(10, (stars / 1000) + (forks / 200) + (subscribers / 100))
+        
+        # Base score based on activity level
+        base_score = activity_level * 0.6
+        
+        # Bonus points for community engagement
+        engagement_bonus = community_engagement * 0.4
+        
+        # Bonus points for issue resolution
+        resolution_bonus = min(2, issue_resolution_rate * 10)
         
         # Calculate final score (capped at max_score)
-        final_score = min(commit_score + contributor_score, self.max_score)
+        final_score = min(base_score + engagement_bonus + resolution_bonus, self.max_score)
         
         return {
             'score': final_score,
-            'github_commits_4w': commits_4w,
-            'github_contributors': contributors,
-            'github_stars': stars,
-            'github_forks': forks,
-            'commit_score': commit_score,
-            'contributor_score': contributor_score
+            'forks': forks,
+            'stars': stars,
+            'subscribers': subscribers,
+            'total_issues': total_issues,
+            'closed_issues': closed_issues,
+            'pull_requests_merged': pull_requests_merged,
+            'pull_request_contributors': pull_request_contributors,
+            'commit_count_4_weeks': commit_count_4_weeks,
+            'issue_resolution_rate': issue_resolution_rate,
+            'activity_level': activity_level,
+            'community_engagement': community_engagement,
+            'base_score': base_score,
+            'engagement_bonus': engagement_bonus,
+            'resolution_bonus': resolution_bonus
         }
