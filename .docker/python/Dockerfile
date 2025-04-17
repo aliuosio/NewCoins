@@ -4,13 +4,9 @@ LABEL maintainer="Osiozekhai Aliu"
 
 # Install cron, sudo, and dependencies
 RUN apt update && apt upgrade -y && \
-    apt install -y cron postgresql-client nano sudo && \
+    apt install -y cron postgresql-client nano && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Configure sudo for root
-RUN echo "root ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/root && \
-    chmod 0440 /etc/sudoers.d/root
 
 # Start cron service
 RUN service cron start
