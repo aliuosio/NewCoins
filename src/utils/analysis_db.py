@@ -15,7 +15,7 @@ from .db import DBConnection
 
 # Import AnalysisResult from the renamed module
 # We need to use relative import to get to the parent directory
-from .. import crypto_analyzer
+from .. import analyzer
 
 logger = logging.getLogger("analysis_db")
 
@@ -41,7 +41,7 @@ def create_analysis_table():
         logger.error(f"Error creating analysis table: {e}")
         raise
 
-def save_analysis_results(results: List[crypto_analyzer.AnalysisResult], symbol: str):
+def save_analysis_results(results: List[analyzer.AnalysisResult], symbol: str):
     """
     Save the analysis results to the database.
     

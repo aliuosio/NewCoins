@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Crypto Report - View cryptocurrency analysis results stored in the database.
+Report - View cryptocurrency analysis results stored in the database.
 
 This script retrieves and displays previously saved analysis results,
 allowing you to view historical data and track cryptocurrency performance over time.
 
 Usage:
-    python crypto_report.py [--symbol BTC] [--days 7] [--limit 10]
+    python report.py [--symbol BTC] [--days 7] [--limit 10]
 """
 import os
 import sys
@@ -23,7 +23,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("crypto_report")
+logger = logging.getLogger("report")
 
 # Load environment variables
 load_dotenv()
