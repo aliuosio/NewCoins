@@ -61,11 +61,10 @@ class BaseDataProvider(IDataProvider):
 class CoinGeckoProvider(BaseDataProvider):
     """Data provider that fetches data from CoinGecko API"""
     
-    def __init__(self, api_key: Optional[str] = None, cache_dir: Optional[str] = None):
+    def __init__(self, cache_dir: Optional[str] = None):
         """Initialize the CoinGecko data provider"""
         super().__init__("coingecko")
         self._coin_id_cache = {}  # Cache to avoid repeated lookups
-        self._api_key = api_key or os.environ.get('COINGECKO_API_KEY')
         self._last_request_time = 0
         self._rate_limit_delay = 1.5  # Seconds between requests (free tier)
         
@@ -75,14 +74,8 @@ class CoinGeckoProvider(BaseDataProvider):
         self._cache_duration = 3600  # Cache duration in seconds (1 hour)
         self._logger.info(f"Using cache directory: {self._cache_dir} with {self._cache_duration}s duration")
         
-        # If we have an API key, we can make more requests per minute and use Pro API URL
-        if self._api_key and self._api_key.strip():
-            self._base_url = "https://pro-api.coingecko.com/api/v3"
-            self._logger.info(f"Using CoinGecko Pro API with authenticated access")
-            self._rate_limit_delay = 0.1  # Paid tier has higher rate limits
-        else:
-            self._base_url = "https://api.coingecko.com/api/v3"
-            self._logger.info(f"Using CoinGecko API with free tier access (rate limited)")
+        self._base_url = "https://api.coingecko.com/api/v3"
+        self._logger.info(f"Using CoinGecko API with free tier access (rate limited)")
     
     def _respect_rate_limit(self) -> None:
         """
@@ -426,10 +419,6 @@ class CoinGeckoProvider(BaseDataProvider):
                 'sparkline': 'false'
             }
             
-            # Add API key if available
-            if self._api_key:
-                params['x_cg_pro_api_key'] = self._api_key
-            
             response = self._make_api_request(
                 f"{self._base_url}/coins/{coin_id}",
                 params=params
@@ -451,10 +440,6 @@ class CoinGeckoProvider(BaseDataProvider):
                     'tickers': 'false',
                     'sparkline': 'false'
                 }
-                
-                # Add API key if available
-                if self._api_key:
-                    simple_params['x_cg_pro_api_key'] = self._api_key
                 
                 response = self._make_api_request(
                     f"{self._base_url}/coins/{coin_id}",
@@ -567,23 +552,13 @@ class CoinGeckoProvider(BaseDataProvider):
             self._logger.debug(f"Using cached response for {url}")
             return cached_response
         
-        # Add API key if available
-        headers = {}
-        if self._api_key:
-            # Remove any leading/trailing whitespace from the API key
-            api_key = self._api_key.strip()
-            headers['x-cg-pro-api-key'] = api_key
-            
-            # For debugging
-            self._logger.debug(f"Using API key: {api_key[:5]}...")
-        
         # Apply rate limiting
         self._respect_rate_limit()
         
         try:
             # Make the request
             self._logger.debug(f"Making API request to {url}")
-            response = requests.get(url, params=params, headers=headers)
+            response = requests.get(url, params=params)
             response.raise_for_status()
             
             # Record the time of this request

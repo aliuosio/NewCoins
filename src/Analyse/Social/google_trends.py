@@ -69,7 +69,6 @@ class GoogleTrendsIndicator(BaseIndicator):
         coin_id = data.get('id') # Assumes data provider returns coin_id like 'bitcoin'
         if not coin_id:
             coin_id = symbol.lower()
-            logger.warning(f"Coin ID not found in data for {symbol}, using symbol '{coin_id}' as fallback.")
 
         # Generate search term for Google Trends
         search_term = coin_id.replace('-', ' ').title() # e.g., "bitcoin" -> "Bitcoin"
@@ -82,11 +81,7 @@ class GoogleTrendsIndicator(BaseIndicator):
             cached_data['score'] = score
             return cached_data
         
-        # No cached data available, check if we should populate the cache
-        # As per requirement: if there is no cache, then do not get an answer
-        logger.warning(f"No cached data available for {search_term} and not allowed to fetch new data")
-        
-        # Return a minimal response indicating no data is available
+        # No cached data available, return a minimal response indicating no data
         minimal_data = {
             'search_term': search_term,
             'simulated': True,  # Mark as simulated
@@ -125,7 +120,6 @@ class GoogleTrendsIndicator(BaseIndicator):
         coin_id = data.get('id') # Assumes data provider returns coin_id like 'bitcoin'
         if not coin_id:
             coin_id = symbol.lower()
-            logger.warning(f"Coin ID not found in data for {symbol}, using symbol '{coin_id}' as fallback.")
 
         # Generate search term for Google Trends
         search_term = coin_id.replace('-', ' ').title() # e.g., "bitcoin" -> "Bitcoin"
