@@ -6,9 +6,6 @@ DROP FUNCTION IF EXISTS update_updated_at_column_{table} CASCADE;
 CREATE TABLE IF NOT EXISTS {table} (
     id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
     trading_volume_score DECIMAL(5,2),
     liquidity_score DECIMAL(5,2),
     whale_transactions_score DECIMAL(5,2),
@@ -18,6 +15,9 @@ CREATE TABLE IF NOT EXISTS {table} (
 
     analysis_date DATE NOT NULL DEFAULT CURRENT_DATE,
     recommendation TEXT,  -- Assumed from index, add if needed
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     UNIQUE(symbol, analysis_date)
 );

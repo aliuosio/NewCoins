@@ -6,15 +6,16 @@ DROP FUNCTION IF EXISTS update_updated_at_column_{table} CASCADE;
 CREATE TABLE IF NOT EXISTS {table} (
     id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,                   
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
     social_volume_score DECIMAL(5,2),       
     sentiment_analysis_score DECIMAL(5,2),  
     developer_activity_score DECIMAL(5,2),  
     community_growth_score DECIMAL(5,2),    
     
     analysis_date DATE NOT NULL DEFAULT CURRENT_DATE,    
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
     UNIQUE(symbol, analysis_date)
 );
 
