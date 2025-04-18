@@ -72,6 +72,35 @@ python main.py analyze BTC --verbose
 
 The NewCoins module fetches information about newly listed cryptocurrencies from the MEXC exchange API. This helps you discover and analyze new coins as soon as they're listed.
 
+### Using the Scheduler Tool
+
+The Scheduler automates the process of:
+1. Fetching new coins from MEXC (using the NewCoins module)
+2. Analyzing those coins with the Analyzer
+3. Checking the analysis summary view for coins with a strong recommendation
+4. Printing (or creating) cronjobs for a fictive trading script for qualifying coins
+
+#### Run the Scheduler (default: last 24h)
+
+```bash
+python src/Scheduler/main.py
+```
+
+- This will fetch and persist new coins, analyze them, and print out cronjob lines for coins with a "BUY" or "STRONG BUY" recommendation.
+- By default, it considers coins added in the last 24 hours (adjustable in the code).
+
+#### Example Output
+```
+[Scheduler] Fetching new coins...
+[Scheduler] Found new coins: ['COIN1', 'COIN2']
+[Scheduler] Analyzing: COIN1,COIN2
+[Scheduler] Qualified coins for trading: ['COIN1']
+[Scheduler] Would add cronjob: * * * * * /usr/bin/python /src/Trade/fictive_trade.py COIN1
+```
+
+You can later adapt the cronjob step to actually write to your system crontab or use a real trading script.
+
+
 #### Fetch coins scheduled to be listed in the next 24 hours (default)
 
 ```bash
