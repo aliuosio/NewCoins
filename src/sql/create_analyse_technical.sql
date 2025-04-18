@@ -18,15 +18,9 @@ CREATE TABLE IF NOT EXISTS {table} (
     smart_contract_audit_score DECIMAL(5,2),
     
     -- Indicator applicability flags
-    trading_volume_applicable BOOLEAN DEFAULT TRUE,
-    liquidity_applicable BOOLEAN DEFAULT TRUE,
-    whale_transactions_applicable BOOLEAN DEFAULT TRUE,
-    token_distribution_applicable BOOLEAN DEFAULT TRUE,
     pre_sale_vesting_applicable BOOLEAN DEFAULT TRUE,
     smart_contract_audit_applicable BOOLEAN DEFAULT TRUE,
 
-    analysis_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    recommendation TEXT,  -- Assumed from index, add if needed
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -43,17 +37,11 @@ COMMENT ON COLUMN {table}.smart_contract_audit_score IS '10 points - Certik/Slow
 COMMENT ON COLUMN {table}.pre_sale_vesting_score IS '10 points - No major unlocks in next 30 days';
 
 -- Add comments for applicability flags
-COMMENT ON COLUMN {table}.trading_volume_applicable IS 'Flag indicating if trading volume indicator is applicable to this cryptocurrency';
-COMMENT ON COLUMN {table}.liquidity_applicable IS 'Flag indicating if liquidity indicator is applicable to this cryptocurrency';
-COMMENT ON COLUMN {table}.whale_transactions_applicable IS 'Flag indicating if whale transactions indicator is applicable to this cryptocurrency';
-COMMENT ON COLUMN {table}.token_distribution_applicable IS 'Flag indicating if token distribution indicator is applicable to this cryptocurrency';
 COMMENT ON COLUMN {table}.pre_sale_vesting_applicable IS 'Flag indicating if pre-sale vesting indicator is applicable to this cryptocurrency';
 COMMENT ON COLUMN {table}.smart_contract_audit_applicable IS 'Flag indicating if smart contract audit indicator is applicable to this cryptocurrency';
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_{table}_symbol ON {table}(symbol);
-CREATE INDEX IF NOT EXISTS idx_{table}_date ON {table}(analysis_date);
-CREATE INDEX IF NOT EXISTS idx_{table}_recommendation ON {table}(recommendation);
 
 -- Create trigger function to auto-update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column_{table}()
