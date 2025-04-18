@@ -47,14 +47,14 @@ def create_tables():
     drop_query = f"DROP TABLE IF EXISTS {table} CASCADE;"
     
     # Create technical analysis table
-    technical_table = os.getenv('TECHNICAL_TABLE', 'technical_indicators')
+    technical_table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
     technical_sql_path = Path(__file__).parent.parent / "sql" / "create_analyse_technical.sql"
     with open(technical_sql_path) as f:
         technical_create_query = f.read().format(table=technical_table)
     technical_drop_query = f"DROP TABLE IF EXISTS {technical_table} CASCADE;"
     
     # Create social analysis table
-    social_table = os.getenv('SOCIAL_TABLE', 'social_indicators')
+    social_table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
     social_sql_path = Path(__file__).parent.parent / "sql" / "create_analyse_social.sql"
     with open(social_sql_path) as f:
         social_create_query = f.read().format(table=social_table)
