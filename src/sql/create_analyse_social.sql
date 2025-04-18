@@ -2,6 +2,8 @@
 DROP TABLE IF EXISTS {table} CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column_{table} CASCADE;
 
+-- Social indicators scoring criteria
+
 -- Create table
 CREATE TABLE IF NOT EXISTS {table} (
     id SERIAL PRIMARY KEY,
@@ -18,6 +20,12 @@ CREATE TABLE IF NOT EXISTS {table} (
     
     UNIQUE(symbol, analysis_date)
 );
+
+-- Add column comments
+COMMENT ON COLUMN {table}.social_volume_score IS '10 points - 1000+ mentions, growing trend';
+COMMENT ON COLUMN {table}.sentiment_analysis_score IS '10 points - >70% positive sentiment';
+COMMENT ON COLUMN {table}.developer_activity_score IS '5 points - Trending upwards';
+COMMENT ON COLUMN {table}.community_growth_score IS '5 points - >500 active members, constant discussion';
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_social_symbol ON {table} (symbol);

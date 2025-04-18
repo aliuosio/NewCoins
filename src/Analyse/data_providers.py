@@ -122,12 +122,12 @@ class CoinGeckoProvider(BaseDataProvider):
             self._logger.error(f"Error getting coin data for {coin_id}: {str(e)}")
             return {}
             
-    def _get_market_chart(self, coin_id: str, days: int = 7) -> Dict[str, Any]:
+    def _get_market_chart(self, coin_id: str, days: int = 90) -> Dict[str, Any]:
         """Get historical market data for a specific coin
         
         Args:
             coin_id: CoinGecko coin ID
-            days: Number of days of data to retrieve (default: 7)
+            days: Number of days of data to retrieve (default: 90)
             
         Returns:
             Dictionary with prices, market caps, and volumes
@@ -143,7 +143,7 @@ class CoinGeckoProvider(BaseDataProvider):
             params = {
                 'vs_currency': 'usd',
                 'days': str(days),
-                'interval': 'daily'
+                'interval': 'hourly'
             }
             
             response = self._api_requester.make_request(f"coins/{coin_id}/market_chart", params=params)
