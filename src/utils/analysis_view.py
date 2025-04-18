@@ -60,7 +60,7 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
             query = text("""
                 SELECT 
                     symbol,
-                    analysis_date,
+
                     total_technical_score,
                     total_social_score,
                     total_score,
@@ -78,8 +78,7 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
                     community_growth_score
                 FROM analysis_summary
                 WHERE symbol = :symbol
-                AND analysis_date >= NOW() - INTERVAL ':days days'
-                ORDER BY analysis_date DESC
+                ORDER BY updated_at DESC
                 LIMIT 1
             """)
             
@@ -88,7 +87,7 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
             if result:
                 return {
                     "symbol": result.symbol,
-                    "analysis_date": result.analysis_date,
+
                     "total_technical_score": result.total_technical_score,
                     "total_social_score": result.total_social_score,
                     "total_score": result.total_score,

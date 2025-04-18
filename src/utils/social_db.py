@@ -81,8 +81,7 @@ def save_social_results(results: List, symbol: str, conn=None):
         
         # Prepare the insert data
         insert_data = {
-            "symbol": symbol,
-            "analysis_date": datetime.now()
+            "symbol": symbol
         }
         
         # Add indicator-specific data (scores)

@@ -64,17 +64,8 @@ def save_analysis_results(results: List, symbol: str, conn=None):
         max_score = sum(r.max_score for r in valid_results)
         percentage = (total_score / max_score * 100) if max_score > 0 else 0
         
-        # Determine recommendation
-        if percentage >= 80:
-            recommendation = "STRONG BUY"
-        elif percentage >= 70:
-            recommendation = "BUY"
-        elif percentage >= 60:
-            recommendation = "HOLD"
-        elif percentage >= 50:
-            recommendation = "WATCH"
-        else:
-            recommendation = "AVOID"
+        # Calculate percentage for informational purposes only
+        percentage = round(percentage, 2)
         
         # Prepare indicator-specific data
         indicator_data = {}
@@ -85,12 +76,13 @@ def save_analysis_results(results: List, symbol: str, conn=None):
             
             # Handle not applicable indicators
             if result.score is None:
-                # Store a special value or flag to indicate not applicable
                 indicator_data[f"{indicator_name}_score"] = None
-                indicator_data[f"{indicator_name}_applicable"] = False
+                if indicator_name in ("pre_sale_vesting", "smart_contract_audit"):
+                    indicator_data[f"{indicator_name}_applicable"] = False
             else:
                 indicator_data[f"{indicator_name}_score"] = result.score
-                indicator_data[f"{indicator_name}_applicable"] = True
+                if indicator_name in ("pre_sale_vesting", "smart_contract_audit"):
+                    indicator_data[f"{indicator_name}_applicable"] = True
             
             # Store raw details for future reference
             raw_data[indicator_name] = result.details
@@ -148,9 +140,7 @@ def save_analysis_results(results: List, symbol: str, conn=None):
         
         # Prepare the insert data
         insert_data = {
-            "symbol": symbol,
-            "analysis_date": datetime.now(),
-            "recommendation": recommendation
+            "symbol": symbol
         }
         
         # Add indicator-specific data (scores)
