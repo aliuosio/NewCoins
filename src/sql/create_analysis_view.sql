@@ -22,7 +22,6 @@ DROP MATERIALIZED VIEW IF EXISTS analysis_summary;
 CREATE OR REPLACE VIEW analysis_summary AS
 SELECT 
     t.symbol,
-    t.analysis_date,
     
     -- Technical indicators
     t.trading_volume_score,
@@ -139,7 +138,7 @@ SELECT
         ELSE 'AVOID - Significant concerns'
     END as recommendation
 FROM analyse_technical t
-LEFT JOIN analyse_social s ON t.symbol = s.symbol AND t.analysis_date = s.analysis_date
+LEFT JOIN analyse_social s ON t.symbol = s.symbol
 
 -- Regular views don't need WITH DATA
 
