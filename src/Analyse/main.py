@@ -35,8 +35,9 @@ from Analyse.Social import (
 )
 from Analyse.indicator_runner import IndicatorRunner
 from utils.db import create_tables
-from utils.analysis_db import create_analysis_table, save_analysis_results, get_latest_analysis
-from utils.social_db import create_social_table, save_social_results, get_latest_social
+from utils.analysis_db import create_technical_indicators_table, save_analysis_results, get_latest_analysis
+from utils.social_db import create_social_indicators_table, save_social_results, get_latest_social
+from utils.analysis_view import create_analysis_view
 
 # Configure logging
 # Default to WARNING level to reduce output in normal mode
@@ -153,22 +154,32 @@ def main():
     an = sub.add_parser('analyze', help='Run analysis')
     an.add_argument('symbols', nargs='+', help='Cryptocurrency symbol(s) to analyze (comma-separated)')
     an.add_argument('--verbose', action='store_true', help='Detailed output')
-    an.add_argument('--save', action='store_true', help='Save to DB')
-    rp = sub.add_parser('report', help='View saved')
-    rp.add_argument('--symbol', help='Symbol to filter')
+    rp = sub.add_parser('report', help='View saved analysis')
+    rp.add_argument('symbols', nargs='*', help='Cryptocurrency symbol(s) to view (optional)')
     args = parser.parse_args()
 
-    create_analysis_table()
-    create_social_table()
+    # Create tables first
+    create_technical_indicators_table()
+    create_social_indicators_table()
+    
+    # Create view after tables are created
+    create_analysis_view()
 
     if args.cmd == 'analyze':
         tech, social = run_analysis(args, args.verbose)
-        if args.save:
-            save_analysis_results(tech, args.symbol)
-            save_social_results(social, args.symbol)
+        # Always save results to database
+        symbol = args.symbols[0]
+        save_analysis_results(tech, symbol)
+        save_social_results(social, symbol)
     elif args.cmd == 'report':
-        ta = get_latest_analysis(symbol=args.symbol)
-        sa = get_latest_social(symbol=args.symbol)
+        # If no symbols specified, get all analyses
+        if not args.symbols:
+            ta = get_latest_analysis()
+            sa = get_latest_social()
+        else:
+            # Get analysis for specified symbols
+            ta = get_latest_analysis(symbols=args.symbols)
+            sa = get_latest_social(symbols=args.symbols)
         print("\n=== ANALYSIS HISTORY ===")
         print(tabulate([list(t.values()) for t in ta], headers=ta[0].keys() if ta else []))
         print("\n=== SOCIAL HISTORY ===")

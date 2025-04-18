@@ -15,14 +15,14 @@ from .db import DBConnection
 
 logger = logging.getLogger("social_db")
 
-def create_social_table():
+def create_social_indicators_table():
     """
     Create the social indicators table if it doesn't exist.
     """
     table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
     coins_table = os.getenv('POSTGRES_TABLE', 'coins')
     # Load SQL from project-level sql folder
-    sql_path = Path(__file__).parent.parent / "sql" / "create_social_table.sql"
+    sql_path = '/src/sql/create_analyse_social.sql'
     
     try:
         with open(sql_path) as f:
@@ -58,21 +58,19 @@ def save_social_results(results: List, symbol: str):
         
         # Prepare indicator-specific data
         indicator_data = {}
-        raw_data = {}
+        
+        # Only save scores that exist in the table schema
+        valid_scores = [
+            'social_volume',
+            'sentiment_analysis',
+            'developer_activity',
+            'community_growth'
+        ]
         
         for result in results:
             indicator_name = result.indicator_name
-            indicator_data[f"{indicator_name}_score"] = result.score
-            
-            # Store raw details for future reference
-            raw_data[indicator_name] = {
-                'score': result.score,
-                'max_score': result.max_score,
-                'details': result.details,
-                'execution_time_ms': result.execution_time_ms,
-                'success': result.success,
-                'error': result.error
-            }
+            if indicator_name in valid_scores:
+                indicator_data[f"{indicator_name}_score"] = result.score
         
         # Calculate total social score
         total_social_score = sum(r.score for r in results)
@@ -80,15 +78,11 @@ def save_social_results(results: List, symbol: str):
         # Prepare the insert data
         insert_data = {
             "symbol": symbol,
-            "analysis_date": datetime.now(),
-            "raw_data": Json(raw_data)
+            "analysis_date": datetime.now()
         }
         
-        # Add indicator-specific data
+        # Add indicator-specific data (scores)
         insert_data.update(indicator_data)
-        
-        # Add total social score
-        insert_data["total_social_score"] = total_social_score
         
         # Build the SQL query dynamically based on available fields
         fields = list(insert_data.keys())
@@ -111,7 +105,7 @@ def save_social_results(results: List, symbol: str):
         logger.error(f"Error saving social indicators for {symbol}: {e}")
         raise
 
-def get_latest_social(symbol: str = None, limit: int = 10):
+def get_latest_social(symbols: List[str] = None, limit: int = 10):
     """
     Retrieve the latest social indicators from the database.
     
@@ -127,14 +121,14 @@ def get_latest_social(symbol: str = None, limit: int = 10):
     try:
         with DBConnection() as conn:
             with conn.cursor() as cur:
-                if symbol:
+                if symbols:
                     query = f"""
                     SELECT * FROM {table}
-                    WHERE symbol = %s
+                    WHERE symbol IN %s
                     ORDER BY analysis_date DESC
                     LIMIT %s
                     """
-                    cur.execute(query, (symbol, limit))
+                    cur.execute(query, (tuple(symbols), limit))
                 else:
                     query = f"""
                     SELECT * FROM {table}

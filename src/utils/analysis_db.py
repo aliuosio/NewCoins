@@ -15,13 +15,13 @@ from .db import DBConnection
 
 logger = logging.getLogger("analysis_db")
 
-def create_analysis_table():
+def create_technical_indicators_table():
     """
-    Create the analyse_technical table if it doesn't exist.
+    Create the technical indicators table if it doesn't exist.
     """
     table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
     # Load SQL from project-level sql folder
-    sql_path = Path(__file__).parent.parent / "sql" / "create_analysis_table.sql"
+    sql_path = '/src/sql/create_analyse_technical.sql'
     
     try:
         with open(sql_path) as f:
@@ -135,16 +135,11 @@ def save_analysis_results(results: List, symbol: str):
         insert_data = {
             "symbol": symbol,
             "analysis_date": datetime.now(),
-            "total_score": total_score,
-            "recommendation": recommendation,
-            "raw_data": Json(raw_data)
+            "recommendation": recommendation
         }
         
-        # Add indicator-specific data
+        # Add indicator-specific data (scores)
         insert_data.update(indicator_data)
-        
-        # Add additional data points
-        insert_data.update(additional_data)
         
         # Build the SQL query dynamically based on available fields
         fields = list(insert_data.keys())
@@ -167,7 +162,7 @@ def save_analysis_results(results: List, symbol: str):
         logger.error(f"Error saving analysis results for {symbol}: {e}")
         raise
 
-def get_latest_analysis(symbol: str = None, limit: int = 10):
+def get_latest_analysis(symbols: List[str] = None, limit: int = 10):
     """
     Retrieve the latest analysis results from the database.
     
@@ -183,14 +178,14 @@ def get_latest_analysis(symbol: str = None, limit: int = 10):
     try:
         with DBConnection() as conn:
             with conn.cursor() as cur:
-                if symbol:
+                if symbols:
                     query = f"""
                     SELECT * FROM {table}
-                    WHERE symbol = %s
+                    WHERE symbol IN %s
                     ORDER BY analysis_date DESC
                     LIMIT %s
                     """
-                    cur.execute(query, (symbol, limit))
+                    cur.execute(query, (tuple(symbols), limit))
                 else:
                     query = f"""
                     SELECT * FROM {table}

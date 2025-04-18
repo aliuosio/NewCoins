@@ -22,7 +22,15 @@ SELECT
     s.social_volume_score,
     s.sentiment_analysis_score,
     s.developer_activity_score,
-    s.total_social_score,
+    s.community_growth_score,
+    
+    -- Calculate total social score (max 30 points)
+    (
+        COALESCE(s.social_volume_score, 0) +
+        COALESCE(s.sentiment_analysis_score, 0) +
+        COALESCE(s.developer_activity_score, 0) +
+        COALESCE(s.community_growth_score, 0)
+    ) as total_social_score,
     
     -- Calculate total technical score (max 70 points)
     (
@@ -42,7 +50,10 @@ SELECT
         COALESCE(t.token_distribution_score, 0) +
         COALESCE(t.pre_sale_vesting_score, 0) +
         COALESCE(t.smart_contract_audit_score, 0) +
-        COALESCE(s.total_social_score, 0)
+        COALESCE(s.social_volume_score, 0) +
+        COALESCE(s.sentiment_analysis_score, 0) +
+        COALESCE(s.developer_activity_score, 0) +
+        COALESCE(s.community_growth_score, 0)
     ) as total_score,
     
     -- Calculate percentage score
@@ -54,7 +65,10 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.total_social_score, 0)
+            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.sentiment_analysis_score, 0) +
+            COALESCE(s.developer_activity_score, 0) +
+            COALESCE(s.community_growth_score, 0)
         ) * 100.0 / 100
     ) as score_percentage,
     
@@ -67,7 +81,10 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.total_social_score, 0)
+            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.sentiment_analysis_score, 0) +
+            COALESCE(s.developer_activity_score, 0) +
+            COALESCE(s.community_growth_score, 0)
         ) >= 80 THEN 'STRONG BUY - High potential for growth'
         WHEN (
             COALESCE(t.trading_volume_score, 0) +
@@ -76,7 +93,10 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.total_social_score, 0)
+            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.sentiment_analysis_score, 0) +
+            COALESCE(s.developer_activity_score, 0) +
+            COALESCE(s.community_growth_score, 0)
         ) >= 70 THEN 'BUY - Good potential for growth'
         WHEN (
             COALESCE(t.trading_volume_score, 0) +
@@ -85,7 +105,10 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.total_social_score, 0)
+            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.sentiment_analysis_score, 0) +
+            COALESCE(s.developer_activity_score, 0) +
+            COALESCE(s.community_growth_score, 0)
         ) >= 60 THEN 'HOLD - Moderate potential'
         WHEN (
             COALESCE(t.trading_volume_score, 0) +
@@ -94,15 +117,13 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.total_social_score, 0)
+            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.sentiment_analysis_score, 0) +
+            COALESCE(s.developer_activity_score, 0) +
+            COALESCE(s.community_growth_score, 0)
         ) >= 50 THEN 'WATCH - Some concerns'
         ELSE 'AVOID - Significant concerns'
-    END as recommendation,
-    
-    -- Raw data from both tables
-    t.raw_data as technical_data,
-    s.raw_data as social_data
-
+    END as recommendation
 FROM analyse_technical t
 LEFT JOIN analyse_social s ON t.symbol = s.symbol AND t.analysis_date = s.analysis_date
 
@@ -119,5 +140,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Grant permissions
-GRANT SELECT ON analysis_summary TO SpecialOsio;
+

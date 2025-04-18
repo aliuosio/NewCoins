@@ -6,6 +6,42 @@ from .db import DBConnection
 
 logger = logging.getLogger(__name__)
 
+def create_analysis_view():
+    """
+    Create the analysis_summary materialized view if it doesn't exist.
+    """
+    try:
+        with DBConnection() as conn:
+            with conn.cursor() as cur:
+                # Check if view exists
+                exists_query = """
+                    SELECT EXISTS (
+                        SELECT 1 
+                        FROM pg_matviews 
+                        WHERE schemaname = 'public' 
+                        AND matviewname = 'analysis_summary'
+                    )
+                """
+                
+                cur.execute(exists_query)
+                exists = cur.fetchone()[0]
+                
+                if not exists:
+                    # Read SQL file
+                    with open("sql/create_analysis_view.sql", "r") as f:
+                        sql = f.read()
+                    
+                    # Execute SQL
+                    cur.execute(sql)
+                    conn.commit()
+                    logger.info("Analysis summary view created successfully")
+                else:
+                    logger.info("Analysis summary view already exists")
+                
+    except Exception as e:
+        logger.error(f"Error creating analysis view: {str(e)}")
+        raise
+
 def refresh_analysis_view():
     """
     Refresh the analysis_summary materialized view to update with latest data.
