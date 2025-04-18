@@ -95,9 +95,9 @@ def save_social_results(results: List, symbol: str, conn=None):
         query = f"""
         INSERT INTO {table} ({', '.join(fields)})
         VALUES ({', '.join(placeholders)})
-        ON CONFLICT (symbol, analysis_date) 
+        ON CONFLICT (symbol) 
         DO UPDATE SET 
-            {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field not in ['symbol', 'analysis_date']])}
+            {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field != 'symbol'])}
         """
         
         if conn:

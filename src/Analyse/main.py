@@ -195,12 +195,31 @@ def run_analysis(args, verbose=False, debug=False):
     return technical_results, social_results
 
 
+def check_table_exists(table_name):
+    """Check if a table exists in the database"""
+    from utils.db import DBConnection
+    
+    query = """
+    SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = %s
+    );
+    """
+    
+    with DBConnection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, (table_name,))
+            return cur.fetchone()[0]
+
 def main():
-    # Create all necessary tables first
-    create_tables()
-    create_technical_indicators_table()
-    create_social_indicators_table()
-    create_analysis_view()
+    # Initialize database tables if they don't exist
+    # We don't want to recreate tables on every run as that would delete previous data
+    if not check_table_exists('analyse_technical'):
+        # Tables don't exist, create them
+        create_tables()
+        create_technical_indicators_table()
+        create_social_indicators_table()
+        create_analysis_view()
 
     parser = argparse.ArgumentParser(description='PumpAndDump application')
     sub = parser.add_subparsers(dest='cmd')
