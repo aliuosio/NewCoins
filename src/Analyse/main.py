@@ -2,15 +2,23 @@
 """
 Main CLI for PumpAndDump analysis (technical + social indicators).
 """
-import argparse
-import os
 import sys
+import os
 import logging
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import argparse
+import datetime
 from typing import List
 from tabulate import tabulate
-from datetime import datetime
 
+# Add the project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Load environment variables from .env file
+from load_env import load_environment_variables
+load_environment_variables()
+
+import argparse
+from Analyse.data_providers import CoinGeckoProvider
 from Analyse.Technical import (
     TradingVolumeIndicator,
     LiquidityIndicator,
@@ -22,7 +30,9 @@ from Analyse.Technical import (
 from Analyse.Social import (
     SocialVolumeIndicator,
     SentimentAnalysisIndicator,
-    DeveloperActivityIndicator
+    DeveloperActivityIndicator,
+    CommunityGrowthIndicator,
+    GoogleTrendsIndicator
 )
 from Analyse.indicator_runner import IndicatorRunner
 from utils.db import create_tables
@@ -53,33 +63,70 @@ def print_result(result):
             else: print(f"  {k}: {v}")
 
 
-def run_analysis(symbol: str, verbose: bool):
-    # Prepare indicators and runner
-    provider = None
-    from Analyse.data_providers import CoinGeckoProvider
-    provider = CoinGeckoProvider(api_key=os.getenv('COINGECKO_API_KEY',''))
-    tech = [TradingVolumeIndicator(provider), LiquidityIndicator(provider), WhaleTransactionsIndicator(provider), TokenDistributionIndicator(provider), PreSaleVestingIndicator(provider), SmartContractAuditIndicator(provider)]
-    social = [SocialVolumeIndicator(provider), SentimentAnalysisIndicator(provider), DeveloperActivityIndicator(provider)]
+def run_analysis(args, verbose: bool):
+    # Create data provider and indicator instances
+    data_provider = CoinGeckoProvider()
+    
+    # Create indicators
+    technical_indicators = [
+        TradingVolumeIndicator(data_provider=data_provider),
+        LiquidityIndicator(data_provider=data_provider),
+        WhaleTransactionsIndicator(data_provider=data_provider),
+        TokenDistributionIndicator(data_provider=data_provider),
+        PreSaleVestingIndicator(data_provider=data_provider),
+        SmartContractAuditIndicator(data_provider=data_provider)
+    ]
+    
+    social_indicators = [
+        SocialVolumeIndicator(data_provider=data_provider),
+        SentimentAnalysisIndicator(data_provider=data_provider),
+        DeveloperActivityIndicator(data_provider=data_provider),
+        CommunityGrowthIndicator(data_provider=data_provider),
+        GoogleTrendsIndicator(data_provider=data_provider)
+    ]
+    
     runner = IndicatorRunner()
-    # Run technical
-    tech_results = runner.run_all_indicators(tech, symbol)
-    # Run social
-    social_results = runner.run_all_indicators(social, symbol)
-    # Print
-    print("\n=== TECHNICAL INDICATORS ===")
-    for r in tech_results: print_result(r) if verbose else print(f"{r.indicator_name}: {r.score:.2f}/{r.max_score:.2f}")
-    print("\n=== SOCIAL INDICATORS ===")
-    for r in social_results: print_result(r) if verbose else print(f"{r.indicator_name}: {r.score:.2f}/{r.max_score:.2f}")
-    return tech_results, social_results
+    
+    # Split comma-separated symbols and flatten the list
+    all_symbols = []
+    for symbol in args.symbols:
+        all_symbols.extend(symbol.split(','))
+    
+    # Remove duplicates and sort
+    all_symbols = sorted(set(all_symbols))
+    
+    # Run indicators for each symbol
+    technical_results = []
+    social_results = []
+    for symbol in all_symbols:
+        print(f"\n=== RESULTS FOR {symbol} ===\n")
+        
+        # Run technical indicators
+        print("=== TECHNICAL INDICATORS ===")
+        technical_result = runner.run_all_indicators(technical_indicators, symbol)
+        for result in technical_result:
+            print_result(result)
+        technical_results.extend(technical_result)
+        
+        # Run social indicators
+        print("\n=== SOCIAL INDICATORS ===")
+        social_result = runner.run_all_indicators(social_indicators, symbol)
+        for result in social_result:
+            print_result(result)
+        social_results.extend(social_result)
+        
+        print("\n")
+    
+    return technical_results, social_results
 
 
 def main():
     # Ensure base tables exist (coins)
     create_tables()
-    parser = argparse.ArgumentParser(description='PumpAndDump cryptocurrency analysis')
+    parser = argparse.ArgumentParser(description='PumpAndDump application')
     sub = parser.add_subparsers(dest='cmd')
     an = sub.add_parser('analyze', help='Run analysis')
-    an.add_argument('symbol', help='Symbol(s), comma-separated')
+    an.add_argument('symbols', nargs='+', help='Cryptocurrency symbol(s) to analyze (comma-separated)')
     an.add_argument('--verbose', action='store_true', help='Detailed output')
     an.add_argument('--save', action='store_true', help='Save to DB')
     rp = sub.add_parser('report', help='View saved')
@@ -90,7 +137,7 @@ def main():
     create_social_table()
 
     if args.cmd == 'analyze':
-        tech, social = run_analysis(args.symbol, args.verbose)
+        tech, social = run_analysis(args, args.verbose)
         if args.save:
             save_analysis_results(tech, args.symbol)
             save_social_results(social, args.symbol)

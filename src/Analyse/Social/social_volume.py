@@ -1,92 +1,171 @@
 #!/usr/bin/env python3
 """
-Social Volume Indicator - Measures mentions and discussions across social platforms.
-
-This indicator evaluates the volume of social media mentions, discussions, and
-engagement across platforms like Twitter, Reddit, and Telegram.
+Social Volume Indicator - Analyzes social media mentions and engagement.
+Combines functionality from multiple social indicators in the old version.
 """
 import logging
+import os
 from typing import Dict, Any, Optional
+from datetime import datetime
 
 from ..base_indicator import BaseIndicator
+from ..interfaces import IDataProvider
+from ..API.social_metrics_client import SocialMetricsClient
 
 logger = logging.getLogger(__name__)
 
 class SocialVolumeIndicator(BaseIndicator):
     """
-    Evaluates social media mentions and discussion volume.
+    Evaluates social media volume and engagement for cryptocurrencies.
     
-    Scoring (max 10 points):
-    - 10 points: Very high discussion volume (>10,000 mentions in 24h)
-    - 8 points: High discussion volume (5,000-10,000 mentions)
-    - 6 points: Moderate discussion volume (1,000-5,000 mentions)
-    - 4 points: Low discussion volume (500-1,000 mentions)
-    - 2 points: Very low discussion volume (100-500 mentions)
-    - 0 points: Minimal discussion volume (<100 mentions)
+    Uses real-time data from Twitter, Reddit, and other sources.
     
-    Additional points for:
-    - Increasing mention trend (+1 point for >20% increase)
-    - Cross-platform presence (+1 point for active on 3+ platforms)
+    Scoring (max 10 points): Based on mention volume, engagement rate, and growth.
     """
-    
-    def __init__(self, data_provider):
+
+    # Override cache TTL to 1 hour for social metrics
+    CACHE_TTL = 3600
+
+    def __init__(self, data_provider: IDataProvider):
         super().__init__(
             "social_volume",
-            10.0,
+            10.0,  # Max score is 10
             data_provider
         )
-    
+        
+        # Initialize social metrics client
+        # Get API keys from environment variables
+        twitter_bearer_token = os.environ.get('TWITTER_BEARER_TOKEN')
+        reddit_client_id = os.environ.get('REDDIT_CLIENT_ID')
+        reddit_client_secret = os.environ.get('REDDIT_CLIENT_SECRET')
+        
+        # Create social metrics client
+        self.social_metrics_client = SocialMetricsClient(
+            twitter_bearer_token=twitter_bearer_token,
+            reddit_client_id=reddit_client_id,
+            reddit_client_secret=reddit_client_secret,
+            cache_ttl=self.CACHE_TTL
+        )
+        
+        # Check if real-time data sources are available
+        self.use_real_data = (
+            twitter_bearer_token is not None or 
+            (reddit_client_id is not None and reddit_client_secret is not None)
+        )
+        
+        if self.use_real_data:
+            logger.info("Social volume analysis will use real-time data sources")
+        else:
+            logger.warning("No API keys provided. Social volume analysis will require API keys")
+
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate the social volume score based on social media metrics.
-        
+        Calculate the social volume score using real-time data.
+
         Args:
-            symbol: Cryptocurrency symbol
-            data: Data dictionary containing social metrics
-            
+            symbol: Cryptocurrency symbol (e.g., 'BTC', 'ETH').
+            data: Raw data from the data provider (contains coin_id and social metrics).
+
         Returns:
-            Dictionary with score and details
+            Dictionary with score and detailed social volume metrics.
         """
-        # Extract social metrics from data
-        community_data = data.get('community_data', {})
+        coin_id = data.get('id')  # Assumes data provider returns coin_id like 'bitcoin'
+        if not coin_id:
+            coin_id = symbol.lower()
+            logger.warning(f"Coin ID not found in data for {symbol}, using symbol '{coin_id}' as fallback.")
+
+        # --- Caching Logic ---
+        cache_key = f"social_volume_{coin_id}"
+        cached_data = self._get_cached_result(cache_key)
+        if cached_data:
+            logger.info(f"Using cached social volume data for {coin_id}")
+            # Recalculate score from cached processed data
+            score = self._calculate_indicator_score(cached_data)
+            cached_data['score'] = score
+            return cached_data
+        # --- End Caching Logic ---
+
+        logger.info(f"Fetching/processing social volume data for {coin_id}")
         
-        twitter_followers = community_data.get('twitter_followers', 0)
-        reddit_subscribers = community_data.get('reddit_subscribers', 0)
-        telegram_users = community_data.get('telegram_users', 0)
+        # Check if API keys are provided
+        if not self.use_real_data:
+            raise ValueError("No API keys provided for social metrics. Set TWITTER_BEARER_TOKEN, REDDIT_CLIENT_ID, and REDDIT_CLIENT_SECRET environment variables.")
         
-        # Calculate total social reach
-        total_social_reach = twitter_followers + reddit_subscribers + telegram_users
+        # Get social volume metrics from multiple sources
+        volume_response = self.social_metrics_client.get_social_volume(
+            query=coin_id,
+            days=7
+        )
         
-        # Calculate platform diversity (bonus for presence across multiple platforms)
-        active_platforms = sum(1 for count in [twitter_followers, reddit_subscribers, telegram_users] if count > 0)
+        if not volume_response:
+            raise ValueError(f"Failed to get social volume data for {coin_id}")
+            
+        # Extract metrics from response
+        mention_count = volume_response.get('mention_count', 0)
+        engagement_count = volume_response.get('engagement_count', 0)
+        sentiment_ratio = volume_response.get('sentiment_ratio', 1.0)
+        growth_rate = volume_response.get('growth_rate', 0.0)
+        platforms = volume_response.get('platforms', {})
         
-        # Base score based on total social reach
-        if total_social_reach >= 1000000:  # 1M+ total reach
-            base_score = 10.0
-        elif total_social_reach >= 500000:  # 500K-1M
-            base_score = 8.0
-        elif total_social_reach >= 100000:  # 100K-500K
-            base_score = 6.0
-        elif total_social_reach >= 50000:   # 50K-100K
-            base_score = 4.0
-        elif total_social_reach >= 10000:   # 10K-50K
-            base_score = 2.0
-        else:
-            base_score = 0.0
-        
-        # Platform diversity bonus (1 point for 2+ platforms, 2 points for 3 platforms)
-        platform_bonus = min(2, active_platforms - 1)
-        
-        # Calculate final score (capped at max_score)
-        final_score = min(base_score + platform_bonus, self.max_score)
-        
-        return {
-            'score': final_score,
-            'total_social_reach': total_social_reach,
-            'twitter_followers': twitter_followers,
-            'reddit_subscribers': reddit_subscribers,
-            'telegram_users': telegram_users,
-            'active_platforms_count': active_platforms,
-            'base_score': base_score,
-            'platform_bonus': platform_bonus
+        # Format the data
+        volume_data = {
+            'mention_count': mention_count,
+            'engagement_count': engagement_count,
+            'engagement_rate': engagement_count / max(mention_count, 1) if mention_count else 0,
+            'sentiment_ratio': sentiment_ratio,
+            'growth_rate': growth_rate,
+            'platforms': platforms,
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'real_data': True
         }
+        
+        logger.info(f"Successfully fetched real-time social volume data for {coin_id}")
+
+        # Calculate the final score from the processed data
+        score = self._calculate_indicator_score(volume_data)
+        volume_data['score'] = score  # Add score to the dictionary
+
+        # Cache the processed data
+        self._cache_result(cache_key, volume_data)
+
+        return volume_data
+
+    def _calculate_indicator_score(self, processed_data: Dict[str, Any]) -> float:
+        """
+        Calculate the final score based on social volume metrics.
+
+        Args:
+            processed_data: The dictionary with social volume metrics.
+
+        Returns:
+            float: Score between 0 and self.max_score (10.0).
+        """
+        if not processed_data:
+            return 0.0
+
+        mention_count = processed_data.get('mention_count', 0)
+        engagement_rate = processed_data.get('engagement_rate', 0)
+        growth_rate = processed_data.get('growth_rate', 0)
+        sentiment_ratio = processed_data.get('sentiment_ratio', 1.0)
+
+        # Calculate score components
+        # Mention volume score (0-5 points)
+        volume_score = min(5.0, (mention_count / 10000) * 5)
+        
+        # Engagement score (0-3 points)
+        engagement_score = min(3.0, engagement_rate * 30)
+        
+        # Growth score (0-2 points)
+        growth_score = min(2.0, growth_rate * 10)
+        
+        # Calculate final score
+        score = volume_score + engagement_score + growth_score
+        
+        # Adjust based on sentiment ratio (positive to negative)
+        sentiment_factor = min(1.2, max(0.8, sentiment_ratio / 2))
+        score = score * sentiment_factor
+        
+        # Ensure score is within bounds (0 to max_score)
+        score = max(0.0, min(score, self.max_score))
+
+        return round(score, 1)

@@ -4,7 +4,7 @@ Analyse module for cryptocurrency indicators.
 
 from .interfaces import IDataProvider, IIndicator, IIndicatorResult, IIndicatorRunner
 from .base_indicator import BaseIndicator
-from .data_providers import CoinGeckoProvider, MockDataProvider
+from .data_providers import CoinGeckoProvider
 from .indicator_runner import IndicatorRunner, IndicatorResult
 
 # Import all technical indicators

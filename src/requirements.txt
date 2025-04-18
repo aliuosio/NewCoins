@@ -6,5 +6,11 @@ psycopg2-binary==2.9.10
 python-dotenv==1.1.0
 pytz==2025.2
 requests==2.32.3
+pytrends==4.9.2  # For Google Trends
 urllib3==2.4.0
 tabulate==0.8.10
+
+# Added for real-time data sources and sentiment analysis
+textblob==0.17.1  # For sentiment analysis
+tweepy==4.14.0    # For Twitter API
+praw==7.7.1       # For Reddit API

@@ -8,7 +8,7 @@ import time
 import json
 import hashlib
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Union
 from abc import abstractmethod
 from datetime import datetime, timedelta
 
@@ -410,7 +410,10 @@ class CoinGeckoProvider(BaseDataProvider):
             params = {
                 'localization': 'false',
                 'tickers': 'false',
-                'developer_data': 'false'
+                'market_data': 'false',
+                'community_data': 'true',
+                'developer_data': 'true',
+                'sparkline': 'false'
             }
             
             response = self._make_api_request(
@@ -448,6 +451,59 @@ class CoinGeckoProvider(BaseDataProvider):
         except Exception as e:
             self._logger.error(f"Error getting market chart for {coin_id}: {str(e)}")
             return {'prices': [], 'total_volumes': []}
+    
+    def _get_social_data(self, symbol: str) -> Dict[str, Any]:
+        """
+        Get social media metrics and community data
+        
+        Args:
+            symbol: Cryptocurrency symbol (e.g., BTC)
+            
+        Returns:
+            Dictionary with social metrics
+        """
+        try:
+            coin_id = self._get_coin_id(symbol)
+            if not coin_id:
+                self._logger.warning(f"Could not find CoinGecko ID for symbol {symbol}")
+                return {}
+            coin_data = self._get_coin_data(coin_id)
+            community_data = coin_data.get('community_data', {})
+            return {
+                'twitter_followers': community_data.get('twitter_followers', 0),
+                'reddit_subscribers': community_data.get('reddit_subscribers', 0),
+                'telegram_users': community_data.get('telegram_users', 0)
+            }
+        except Exception as e:
+            self._logger.error(f"Error fetching social data for {symbol}: {str(e)}")
+            return {}
+    
+    def _get_developer_data(self, symbol: str) -> Dict[str, Any]:
+        """
+        Get developer activity and GitHub metrics
+        
+        Args:
+            symbol: Cryptocurrency symbol (e.g., BTC)
+            
+        Returns:
+            Dictionary with developer metrics
+        """
+        try:
+            coin_id = self._get_coin_id(symbol)
+            if not coin_id:
+                self._logger.warning(f"Could not find CoinGecko ID for symbol {symbol}")
+                return {}
+            coin_data = self._get_coin_data(coin_id)
+            developer_data = coin_data.get('developer_data', {})
+            return {
+                'commits': developer_data.get('commits', 0),
+                'contributors': developer_data.get('contributors', 0),
+                'stars': developer_data.get('stars', 0),
+                'forks': developer_data.get('forks', 0)
+            }
+        except Exception as e:
+            self._logger.error(f"Error fetching developer data for {symbol}: {str(e)}")
+            return {}
     
     def _make_api_request(self, url: str, params: Dict[str, Any] = None) -> requests.Response:
         """
@@ -543,6 +599,3 @@ class CoinGeckoProvider(BaseDataProvider):
             self._logger.debug(f"Cached data for {cache_key}")
         except Exception as e:
             self._logger.error(f"Error caching data for {cache_key}: {str(e)}")
-
-
-
