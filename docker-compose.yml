@@ -24,6 +24,7 @@ services:
       "
     volumes:
       - ./src:/src
+      - pip_cache:/root/.cache/pip
       - ./.env:/.env
     
   postgres:
