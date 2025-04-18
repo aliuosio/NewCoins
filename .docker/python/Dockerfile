@@ -16,6 +16,6 @@ RUN echo 'export EDITOR=nano' >> /root/.bashrc
 RUN echo 'export EDITOR=nano' >> /root/.profile
 
 COPY requirements.txt /src/requirements.txt
-RUN pip install -r /src/requirements.txt
+RUN pip install --upgrade pip && pip install -r /src/requirements.txt
 
 CMD ["cron", "-f"]
