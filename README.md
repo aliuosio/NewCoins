@@ -1,43 +1,11 @@
 # PumpAndDump - Cryptocurrency Analysis Tool
 
-A comprehensive cryptocurrency analysis tool that evaluates various technical and social indicators to provide investment recommendations.
+A tool for automated cryptocurrency analysis using technical and social indicators, with recommendations and database storage.
 
-## Features
-
-- Analyzes cryptocurrencies using multiple technical indicators
-- Evaluates social metrics including sentiment and developer activity
-- Saves analysis results to a PostgreSQL database
-- Provides historical data viewing and comparison
-- Supports multiple cryptocurrencies in a single analysis
-- Caches API responses for improved performance
-- Tracks newly listed cryptocurrencies from MEXC exchange
-- Monitors upcoming coin listings for investment opportunities
-- Filters coins by listing timeframe
-
-## Project Modules
-
-### Analyse Module
-The core analysis engine that evaluates cryptocurrencies using both technical and social indicators:
-- **Technical Indicators**: Trading volume, liquidity, whale transactions, token distribution, pre-sale vesting, and smart contract audits
-- **Social Indicators**: Sentiment analysis, developer activity, community growth, and Google Trends data
-- Produces a comprehensive score and investment recommendation
-
-### NewCoins Module
-
-A tool for tracking new cryptocurrency listings:
-
-- **API Integration**: Connects to MEXC exchange API for coin listings data
-- **Time Filtering**: Configurable to track coins in specific time periods (24h, 48h, 72h)
-- **Historical Data**: Retrieves coins listed in the past (last 24h, 48h)
-- **Database Storage**: Saves coin data to PostgreSQL for analysis
-- **Metadata**: Stores coin details including name, symbol, and listing times
-- **Command-line Interface**: Parameter-based filtering for workflow integration
-
-Useful for traders interested in newly listed tokens, which often have higher volatility during initial trading periods.
-
-### Database Structure
-- Uses PostgreSQL for persistent storage
-- Maintains unique records for each cryptocurrency
+## Setup
+1. Clone the repo and configure `.env`
+2. Build and start containers:
+   ```bash
 - Updates existing records when new analyses are performed
 - Supports historical data tracking and comparison
 
@@ -60,6 +28,28 @@ Useful for traders interested in newly listed tokens, which often have higher vo
 
 # Analyze multiple cryptocurrencies
 
+Analyze coins (single or multiple):
+```bash
+python main.py analyze BTC
+python main.py analyze BTC,ETH,SOL
+```
+
+Verbose analysis:
+```bash
+python main.py analyze BTC --verbose
+```
+
+Run the Scheduler:
+```bash
+python Scheduler/main.py
+```
+
+This fetches, analyzes, and prints cronjob lines for coins with a "BUY" or "STRONG BUY" recommendation (default: last 24h).
+   
+      python main.py analyze BTC
+
+# Analyze multiple cryptocurrencies
+
       python main.py analyze BTC,ETH,SOL,DOGE
 
 #### Analyze with verbose output
@@ -72,22 +62,39 @@ python main.py analyze BTC --verbose
 
 The NewCoins module fetches information about newly listed cryptocurrencies from the MEXC exchange API. This helps you discover and analyze new coins as soon as they're listed.
 
+### Using the Scheduler Tool
+
+The Scheduler automates the process of:
+1. Fetching new coins from MEXC (using the NewCoins module)
+2. Analyzing those coins with the Analyzer
+3. Checking the analysis summary view for coins with a strong recommendation
+4. Printing (or creating) cronjobs for a fictive trading script for qualifying coins
+
+#### Run the Scheduler (default: last 24h)
+
+```bash
+python src/Scheduler/main.py
+```
+
+- This will fetch and persist new coins, analyze them, and print out cronjob lines for coins with a "BUY" or "STRONG BUY" recommendation.
+- By default, it considers coins added in the last 24 hours (adjustable in the code).
+
 #### Fetch coins scheduled to be listed in the next 24 hours (default)
 
 ```bash
-python src/NewCoins/main.py
+python NewCoins/main.py
 ```
 
 #### Fetch coins scheduled to be listed in the next X hours
 
 ```bash
-python src/NewCoins/main.py 48  # For next 48 hours
+python NewCoins/main.py 48  # For next 48 hours
 ```
 
 #### Fetch coins that were listed in the past X hours
 
 ```bash
-python src/NewCoins/main.py -24  # For past 24 hours
+python NewCoins/main.py -24  # For past 24 hours
 ```
 
 The fetched coins are automatically saved to the database for later analysis.
