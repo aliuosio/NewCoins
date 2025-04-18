@@ -78,6 +78,27 @@ def print_result(result, verbose=False):
             print(f"  ERROR: {result.error}")
 
 
+# Create data provider and indicator instances
+data_provider = CoinGeckoProvider()
+
+technical_indicators = [
+    TradingVolumeIndicator(data_provider=data_provider),
+    LiquidityIndicator(data_provider=data_provider),
+    WhaleTransactionsIndicator(data_provider=data_provider),
+    TokenDistributionIndicator(data_provider=data_provider),
+    PreSaleVestingIndicator(data_provider=data_provider),
+    SmartContractAuditIndicator(data_provider=data_provider)
+]
+
+social_indicators = [
+    SentimentAnalysisIndicator(data_provider=data_provider),
+    DeveloperActivityIndicator(data_provider=data_provider),
+    CommunityGrowthIndicator(data_provider=data_provider),
+    GoogleTrendsIndicator(data_provider=data_provider)
+]
+
+runner = IndicatorRunner()
+
 def run_analysis(args, verbose: bool):
     # Set logging level based on verbose flag
     if verbose:
@@ -90,28 +111,6 @@ def run_analysis(args, verbose: bool):
         # In normal mode, keep most loggers at WARNING level
         # Only set essential loggers to INFO
         logging.getLogger("pumptandump").setLevel(logging.INFO)
-    
-    # Create data provider and indicator instances
-    data_provider = CoinGeckoProvider()
-    
-    # Create indicators
-    technical_indicators = [
-        TradingVolumeIndicator(data_provider=data_provider),
-        LiquidityIndicator(data_provider=data_provider),
-        WhaleTransactionsIndicator(data_provider=data_provider),
-        TokenDistributionIndicator(data_provider=data_provider),
-        PreSaleVestingIndicator(data_provider=data_provider),
-        SmartContractAuditIndicator(data_provider=data_provider)
-    ]
-    
-    social_indicators = [
-        SentimentAnalysisIndicator(data_provider=data_provider),
-        DeveloperActivityIndicator(data_provider=data_provider),
-        CommunityGrowthIndicator(data_provider=data_provider),
-        GoogleTrendsIndicator(data_provider=data_provider)
-    ]
-    
-    runner = IndicatorRunner()
     
     # Split comma-separated symbols and flatten the list
     all_symbols = []
