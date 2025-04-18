@@ -23,8 +23,8 @@ services:
         tail -f /dev/null
       "
     volumes:
-      - ./src:/src
       - pip_cache:/root/.cache/pip
+      - ./src:/src
       - ./.env:/.env
     
   postgres:
@@ -45,3 +45,4 @@ services:
 
 volumes:
   pg_data:
+  pip_cache:
