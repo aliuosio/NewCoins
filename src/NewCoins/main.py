@@ -3,10 +3,10 @@
 Fetch new coins for the next 24 hours from MEXC API.
 """
 
-from abc import ABC, abstractmethod
+from .interfaces import HTTPClient
 from dataclasses import dataclass
 import sys
-import requests
+from .implementations import RequestsHTTPClient
 from typing import Any, List
 import os
 from dotenv import load_dotenv
@@ -23,16 +23,6 @@ class NewCoin:
     start_time: str
     end_time: str
 
-class HTTPClient(ABC):
-    @abstractmethod
-    def get(self, url: str) -> Any:
-        pass
-
-class RequestsHTTPClient(HTTPClient):
-    def get(self, url: str) -> Any:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.json()
 
 class NewCoinsFetcher:
     def __init__(self, client: HTTPClient, url: str):
@@ -41,7 +31,6 @@ class NewCoinsFetcher:
 
     def fetch(self) -> List[NewCoin]:
         raw = self.client.get(self.url)
-        # Normalize API response into iterable items
         if isinstance(raw, dict):
             data = raw.get("data", {})
             items = data.get("newCoins", [])
@@ -51,7 +40,6 @@ class NewCoinsFetcher:
             raise ValueError(f"Unexpected API response type: {type(raw)}")
         coins: List[NewCoin] = []
         for item in items:
-            # Support dict entries or simple symbols
             if isinstance(item, dict):
                 symbol = item.get("vcoinName", item.get("symbol"))
                 name = item.get("vcoinNameFull", symbol)
@@ -63,7 +51,7 @@ class NewCoinsFetcher:
                 start = ""
                 end = ""
             else:
-                continue  # skip unrecognized item
+                continue
             coins.append(NewCoin(
                 symbol=symbol,
                 name=name,
