@@ -28,7 +28,6 @@ from Analyse.Technical import (
     SmartContractAuditIndicator
 )
 from Analyse.Social import (
-    SocialVolumeIndicator,
     SentimentAnalysisIndicator,
     DeveloperActivityIndicator,
     CommunityGrowthIndicator,
@@ -40,30 +39,57 @@ from utils.analysis_db import create_analysis_table, save_analysis_results, get_
 from utils.social_db import create_social_table, save_social_results, get_latest_social
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Default to WARNING level to reduce output in normal mode
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("pumptandump")
 
-def print_result(result):
-    print(f"\n{'=' * 50}")
-    print(f"INDICATOR: {result.indicator_name}")
-    print(f"{'=' * 50}")
-    print(f"Symbol: {result.symbol}")
-    print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
-    if hasattr(result, 'error') and result.error:
-        print(f"ERROR: {result.error}")
+# Set specific loggers to higher levels to reduce noise
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("pytrends").setLevel(logging.ERROR)
+logging.getLogger("praw").setLevel(logging.WARNING)
+
+def print_result(result, verbose=False):
+    if verbose:
+        # Detailed output for verbose mode
+        print(f"\n{'=' * 50}")
+        print(f"INDICATOR: {result.indicator_name}")
+        print(f"{'=' * 50}")
+        print(f"Symbol: {result.symbol}")
+        print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+        if hasattr(result, 'error') and result.error:
+            print(f"ERROR: {result.error}")
+        else:
+            print("\nDetails:")
+            for k, v in result.details.items():
+                if isinstance(v, dict):
+                    print(f"  {k}:")
+                    for kk, vv in v.items(): print(f"    {kk}: {vv}")
+                elif isinstance(v, list):
+                    print(f"  {k}:")
+                    for item in v: print(f"    - {item}")
+                else:
+                    print(f"  {k}: {v}")
     else:
-        print("\nDetails:")
-        for k, v in result.details.items():
-            if isinstance(v, dict):
-                print(f"  {k}:")
-                for kk, vv in v.items(): print(f"    {kk}: {vv}")
-            elif isinstance(v, list):
-                print(f"  {k}:")
-                for item in v: print(f"    - {item}")
-            else: print(f"  {k}: {v}")
+        # Concise output for normal mode
+        print(f"\n{result.indicator_name}: {result.score:.1f}/{result.max_score:.1f} ({result.score/result.max_score*100:.1f}%)")
+        if hasattr(result, 'error') and result.error:
+            print(f"  ERROR: {result.error}")
 
 
 def run_analysis(args, verbose: bool):
+    # Set logging level based on verbose flag
+    if verbose:
+        # In verbose mode, set main loggers to INFO level
+        logging.getLogger().setLevel(logging.INFO)
+        logging.getLogger("pumptandump").setLevel(logging.INFO)
+        logging.getLogger("indicator_runner").setLevel(logging.INFO)
+        logging.getLogger("data_provider").setLevel(logging.INFO)
+    else:
+        # In normal mode, keep most loggers at WARNING level
+        # Only set essential loggers to INFO
+        logging.getLogger("pumptandump").setLevel(logging.INFO)
+    
     # Create data provider and indicator instances
     data_provider = CoinGeckoProvider()
     
@@ -78,7 +104,6 @@ def run_analysis(args, verbose: bool):
     ]
     
     social_indicators = [
-        SocialVolumeIndicator(data_provider=data_provider),
         SentimentAnalysisIndicator(data_provider=data_provider),
         DeveloperActivityIndicator(data_provider=data_provider),
         CommunityGrowthIndicator(data_provider=data_provider),
@@ -102,17 +127,17 @@ def run_analysis(args, verbose: bool):
         print(f"\n=== RESULTS FOR {symbol} ===\n")
         
         # Run technical indicators
-        print("=== TECHNICAL INDICATORS ===")
+        print("=== TECHNICAL INDICATORS ===" if verbose else "TECHNICAL INDICATORS:")
         technical_result = runner.run_all_indicators(technical_indicators, symbol)
         for result in technical_result:
-            print_result(result)
+            print_result(result, verbose)
         technical_results.extend(technical_result)
         
         # Run social indicators
-        print("\n=== SOCIAL INDICATORS ===")
+        print("\n=== SOCIAL INDICATORS ===" if verbose else "\nSOCIAL INDICATORS:")
         social_result = runner.run_all_indicators(social_indicators, symbol)
         for result in social_result:
-            print_result(result)
+            print_result(result, verbose)
         social_results.extend(social_result)
         
         print("\n")

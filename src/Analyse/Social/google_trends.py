@@ -6,8 +6,12 @@ Replicates functionality from the old Indicator_Old version.
 import logging
 import time
 import random
+import os
+import json
+import hashlib
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
+from pathlib import Path
 
 # Import PyTrends safely
 try:
@@ -43,11 +47,17 @@ class GoogleTrendsIndicator(BaseIndicator):
         )
         if not PYTRENDS_AVAILABLE:
             logger.warning("Pytrends library not found. GoogleTrendsIndicator will run in simulation mode only.")
+        
+        # Set up cache directory
+        self._cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'cache', 'google_trends')
+        os.makedirs(self._cache_dir, exist_ok=True)
+        self._cache_duration = 3600  # Cache duration in seconds (1 hour)
+        logger.info(f"Using Google Trends cache directory: {self._cache_dir} with {self._cache_duration}s duration")
         # Note: The old version mapped this to 'google_trends' in the DB.
 
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate the Google Trends score using real data.
+        Calculate the Google Trends score using cached data only.
 
         Args:
             symbol: Cryptocurrency symbol (e.g., 'BTC', 'ETH').
@@ -60,41 +70,87 @@ class GoogleTrendsIndicator(BaseIndicator):
         if not coin_id:
             coin_id = symbol.lower()
             logger.warning(f"Coin ID not found in data for {symbol}, using symbol '{coin_id}' as fallback.")
-            # return self._create_error_response(symbol, "Coin ID missing in provided data")
 
-        # Use coin_id for cache key and search term generation
-        cache_key = f"trends_{coin_id}"
+        # Generate search term for Google Trends
         search_term = coin_id.replace('-', ' ').title() # e.g., "bitcoin" -> "Bitcoin"
 
-        # --- Caching Logic ---
-        cached_data = self._get_cached_result(cache_key)
+        # Check if we have cached data
+        cached_data = self._get_from_cache(search_term)
         if cached_data:
-            logger.info(f"Using cached Google Trends data for {coin_id}")
-            # Recalculate score from cached processed data
+            # We have cached data, calculate the score and return it
             score = self._calculate_indicator_score(cached_data)
             cached_data['score'] = score
             return cached_data
-        # --- End Caching Logic ---
+        
+        # No cached data available, check if we should populate the cache
+        # As per requirement: if there is no cache, then do not get an answer
+        logger.warning(f"No cached data available for {search_term} and not allowed to fetch new data")
+        
+        # Return a minimal response indicating no data is available
+        minimal_data = {
+            'search_term': search_term,
+            'simulated': True,  # Mark as simulated
+            'trend_data': {
+                'current_interest': 0,
+                'previous_interest': 0,
+                'percent_change': 0,
+                'trend_direction': 0,
+                'trend_intensity': 0,
+                'trend_status': 'No Data Available'
+            },
+            'interest_history': [],
+            'related_queries': [],
+            'no_data': True,  # Flag to indicate no data is available
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Calculate a minimal score
+        score = 0.0  # No data means zero score
+        minimal_data['score'] = score
+        
+        return minimal_data
+        
+    def _populate_cache(self, symbol: str, data: Dict[str, Any]) -> bool:
+        """
+        Populate the cache with Google Trends data.
+        This method should be called separately to fill the cache.
+        
+        Args:
+            symbol: Cryptocurrency symbol (e.g., 'BTC', 'ETH').
+            data: Raw data from the data provider (contains coin_id).
+            
+        Returns:
+            True if cache was successfully populated, False otherwise.
+        """
+        coin_id = data.get('id') # Assumes data provider returns coin_id like 'bitcoin'
+        if not coin_id:
+            coin_id = symbol.lower()
+            logger.warning(f"Coin ID not found in data for {symbol}, using symbol '{coin_id}' as fallback.")
 
+        # Generate search term for Google Trends
+        search_term = coin_id.replace('-', ' ').title() # e.g., "bitcoin" -> "Bitcoin"
+        
         # Check if PyTrends is available
         if not PYTRENDS_AVAILABLE:
-            raise ImportError("PyTrends library is not installed. Install it with 'pip install pytrends'.")
+            logger.error("PyTrends library is not installed. Cannot populate cache.")
+            return False
 
         # Fetch real data
-        logger.info(f"Fetching real Google Trends data for {search_term}")
-        processed_data = self._fetch_real_trends_data(search_term, coin_id)
-        
-        if not processed_data:
-            raise ValueError(f"Failed to fetch Google Trends data for {search_term}")
+        logger.info(f"Fetching real Google Trends data for {search_term} to populate cache")
+        try:
+            processed_data = self._fetch_real_trends_data(search_term, coin_id)
+            
+            if not processed_data:
+                logger.error(f"Failed to fetch Google Trends data for {search_term}")
+                return False
 
-        # Calculate the final score from the processed data
-        score = self._calculate_indicator_score(processed_data)
-        processed_data['score'] = score # Add score to the dictionary
-
-        # Cache the processed data
-        self._cache_result(cache_key, processed_data)
-
-        return processed_data
+            # Cache the processed data
+            self._cache_response(search_term, processed_data)
+            logger.info(f"Successfully cached Google Trends data for {search_term}")
+            return True
+        except Exception as e:
+            logger.error(f"Error populating cache for {search_term}: {str(e)}")
+            return False
 
     def _fetch_real_trends_data(self, search_term: str, coin_id: str) -> Dict[str, Any]:
         """Fetch real Google Trends data using PyTrends."""
@@ -129,6 +185,23 @@ class GoogleTrendsIndicator(BaseIndicator):
             logger.debug("Patched pytrends.request.TrendReq._get_data")
         except Exception as e:
             logger.warning(f"Failed to patch pytrends.request.TrendReq._get_data: {e}")
+        
+        # Fix the FutureWarning about fillna(False) by monkey patching pandas DataFrame methods
+        try:
+            import pandas as pd
+            # Set pandas option to avoid the FutureWarning
+            pd.set_option('future.no_silent_downcasting', True)
+            
+            # Alternatively, we could monkey patch the fillna method, but the option is cleaner
+            # original_fillna = pd.DataFrame.fillna
+            # def patched_fillna(self, *args, **kwargs):
+            #     result = original_fillna(self, *args, **kwargs)
+            #     return result.infer_objects(copy=False) if hasattr(result, 'infer_objects') else result
+            # pd.DataFrame.fillna = patched_fillna
+            
+            logger.debug("Set pandas option to fix FutureWarning about fillna")
+        except Exception as e:
+            logger.warning(f"Failed to set pandas option: {e}")
         
         # Now create the PyTrends instance with minimal parameters to reduce chance of errors
         try:
@@ -198,6 +271,141 @@ class GoogleTrendsIndicator(BaseIndicator):
 
 
 
+    def _get_cache_key(self, search_term: str) -> str:
+        """
+        Generate a unique cache key for a search term
+        
+        Args:
+            search_term: The search term to generate a key for
+            
+        Returns:
+            Cache key string
+        """
+        # Create a hash of the search term to use as the cache key
+        hash_obj = hashlib.md5(search_term.lower().encode())
+        return hash_obj.hexdigest()
+    
+    def _get_from_cache(self, search_term: str) -> Optional[Dict[str, Any]]:
+        """
+        Get data from cache if it exists and is not expired
+        
+        Args:
+            search_term: Search term to get cached data for
+            
+        Returns:
+            Cached data or None if not found or expired
+        """
+        cache_key = self._get_cache_key(search_term)
+        cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
+        
+        if not os.path.exists(cache_file):
+            logger.debug(f"No cache file found for {search_term}")
+            return None
+        
+        try:
+            # Check if the cache file is expired
+            file_modified_time = os.path.getmtime(cache_file)
+            current_time = time.time()
+            
+            if current_time - file_modified_time > self._cache_duration:
+                logger.debug(f"Cache for {search_term} is expired")
+                return None
+            
+            # Read the cache file
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+            
+            logger.info(f"Using cached Google Trends data for {search_term} (cached {int((current_time - file_modified_time) / 60)} minutes ago)")
+            return cached_data
+        except Exception as e:
+            logger.warning(f"Error reading cache for {search_term}: {str(e)}")
+            return None
+    
+    def _cache_response(self, search_term: str, data: Dict[str, Any]) -> None:
+        """
+        Cache the response data
+        
+        Args:
+            search_term: Search term
+            data: Data to cache
+        """
+        cache_key = self._get_cache_key(search_term)
+        cache_file = os.path.join(self._cache_dir, f"{cache_key}.json")
+        
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            logger.debug(f"Cached Google Trends data for {search_term}")
+        except Exception as e:
+            logger.warning(f"Error caching data for {search_term}: {str(e)}")
+    
+    def _simulate_trends_data(self, search_term: str, coin_id: str) -> Dict[str, Any]:
+        """
+        Simulate Google Trends data when the API fails or is rate limited.
+        
+        This provides realistic fallback data based on the cryptocurrency's popularity.
+        
+        Args:
+            search_term: The search term used (e.g., "Bitcoin")
+            coin_id: The coin ID (e.g., "bitcoin")
+            
+        Returns:
+            Dictionary with simulated trend data
+        """
+        logger.info(f"Simulating Google Trends data for {search_term}")
+        
+        # Generate realistic interest values based on the coin
+        # Well-known coins get higher interest values
+        base_interest = 0
+        if coin_id.lower() in ['bitcoin', 'btc']:
+            base_interest = 70  # Bitcoin has high interest
+        elif coin_id.lower() in ['ethereum', 'eth']:
+            base_interest = 50  # Ethereum has medium-high interest
+        elif coin_id.lower() in ['dogecoin', 'doge', 'solana', 'sol', 'ripple', 'xrp']:
+            base_interest = 30  # Popular altcoins have medium interest
+        else:
+            base_interest = 15  # Other coins have lower interest
+        
+        # Add some randomness to make it look realistic
+        current_interest = max(0, min(100, base_interest + random.randint(-10, 10)))
+        previous_interest = max(0, min(100, base_interest + random.randint(-15, 15)))
+        
+        # Generate a realistic trend history (7 days)
+        interest_history = []
+        today = datetime.now()
+        for i in range(7):
+            day = today - timedelta(days=6-i)  # Start 6 days ago
+            # Generate a value that's somewhat close to the base interest
+            daily_interest = max(0, min(100, base_interest + random.randint(-20, 20)))
+            interest_history.append({
+                'date': day.strftime('%Y-%m-%d'),
+                'value': daily_interest
+            })
+        
+        # Calculate trend metrics
+        percent_change = ((current_interest - previous_interest) / max(previous_interest, 1)) * 100
+        trend_direction = max(-1.0, min(1.0, percent_change / 50))  # Scale to -1 to 1
+        trend_intensity = min(1.0, abs(percent_change) / 50)  # Scale to 0 to 1
+        
+        # Generate related queries
+        related_queries = self._generate_related_queries(search_term)
+        
+        return {
+            'search_term': search_term,
+            'simulated': True,  # Mark as simulated data
+            'trend_data': {
+                'current_interest': current_interest,
+                'previous_interest': previous_interest,
+                'percent_change': round(percent_change, 1),
+                'trend_direction': round(trend_direction, 2),
+                'trend_intensity': round(trend_intensity, 2),
+                'trend_status': self._get_trend_status(trend_direction, trend_intensity)
+            },
+            'interest_history': interest_history,
+            'related_queries': related_queries,
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
     def _get_trend_status(self, direction: float, intensity: float) -> str:
         """Determine the trend status based on direction and intensity (old logic)."""
         if direction >= 0.5:

@@ -125,18 +125,30 @@ class SocialMetricsClient(BaseAPIClient):
         if self._is_cache_valid(cache_key):
             return self.cache[cache_key]
         
-        # Get social metrics data based on source
-        if source == self.SOURCE_TWITTER:
-            metrics_data = self._get_twitter_metrics(query)
-        elif source == self.SOURCE_REDDIT:
-            metrics_data = self._get_reddit_metrics(query)
-        elif source == self.SOURCE_TELEGRAM:
-            metrics_data = self._get_telegram_metrics(query)
-        elif source == self.SOURCE_EXTERNAL_API:
-            metrics_data = self._get_external_api_metrics(query)
-        else:
-            # Default to Twitter metrics
-            metrics_data = self._get_twitter_metrics(query)
+        try:
+            # Get social metrics data based on source
+            if source == self.SOURCE_TWITTER:
+                # Only try to get Twitter metrics if TWITTER_BEARER_TOKEN is set
+                if TWITTER_AVAILABLE and self.twitter_bearer_token:
+                    metrics_data = self._get_twitter_metrics(query)
+                else:
+                    logger.warning(f"Twitter API not available or TWITTER_BEARER_TOKEN not set. Using simulated metrics for {query}.")
+                    metrics_data = self._get_simulated_metrics(query, source=self.SOURCE_TWITTER)
+            elif source == self.SOURCE_REDDIT:
+                metrics_data = self._get_reddit_metrics(query)
+            elif source == self.SOURCE_TELEGRAM:
+                metrics_data = self._get_telegram_metrics(query)
+            elif source == self.SOURCE_EXTERNAL_API:
+                metrics_data = self._get_external_api_metrics(query)
+            else:
+                # Default to simulated metrics
+                metrics_data = self._get_simulated_metrics(query, source=self.SOURCE_TWITTER)
+        except Exception as e:
+            logger.error(f"Error getting {source} metrics for {query}: {str(e)}")
+            # Fall back to simulated metrics on error
+            metrics_data = self._get_simulated_metrics(query, source=source)
+            metrics_data['error'] = str(e)
+            metrics_data['simulated'] = True
         
         # Cache the result
         self._cache_result(cache_key, metrics_data)
@@ -145,7 +157,7 @@ class SocialMetricsClient(BaseAPIClient):
     
     def _get_twitter_metrics(self, query: str) -> Dict[str, Any]:
         """
-        Get Twitter metrics for a query.
+        Get Twitter metrics for a query using the Twitter API with TWITTER_BEARER_TOKEN.
         
         Args:
             query: Query string
@@ -153,14 +165,25 @@ class SocialMetricsClient(BaseAPIClient):
         Returns:
             Twitter metrics as a dictionary
         """
-        if not TWITTER_AVAILABLE or not self.twitter_client:
-            logger.warning("Twitter API is not available. Using simulated metrics.")
-            return self._get_simulated_metrics(query, source=self.SOURCE_TWITTER)
+        if not TWITTER_AVAILABLE:
+            logger.error("Twitter API library (tweepy) is not installed. Please install it with 'pip install tweepy'.")
+            raise ImportError("Twitter API library (tweepy) is not installed")
+        
+        if not self.twitter_bearer_token:
+            logger.error("TWITTER_BEARER_TOKEN is not set in the .env file. Please add it to use the Twitter API.")
+            raise ValueError("TWITTER_BEARER_TOKEN is not set in the .env file")
+        
+        if not self.twitter_client:
+            # Try to initialize the Twitter client with the bearer token
+            try:
+                self.twitter_client = tweepy.Client(bearer_token=self.twitter_bearer_token)
+                logger.info("Twitter client initialized with bearer token")
+            except Exception as e:
+                logger.error(f"Failed to initialize Twitter client: {str(e)}")
+                raise
         
         try:
-            # Try to find the Twitter username for the query
-            # This is a simplified approach - in a real implementation,
-            # you would use a more robust method to find the correct Twitter account
+            # Map cryptocurrency query to appropriate Twitter username
             username = query.lower()
             if username == 'bitcoin':
                 username = 'bitcoin'
@@ -179,33 +202,36 @@ class SocialMetricsClient(BaseAPIClient):
             elif username == 'dogecoin' or username == 'doge':
                 username = 'dogecoin'
             
-            # Get user information
+            logger.info(f"Fetching Twitter metrics for username: {username}")
+            
+            # Get user information from Twitter API
             user = self.twitter_client.get_user(username=username, user_fields=['public_metrics', 'description', 'created_at'])
             
-            if user.data:
-                user_data = user.data
-                metrics = user_data.public_metrics
-                
-                return {
-                    'query': query,
-                    'source': self.SOURCE_TWITTER,
-                    'username': user_data.username,
-                    'name': user_data.name,
-                    'description': user_data.description,
-                    'followers_count': metrics['followers_count'],
-                    'following_count': metrics['following_count'],
-                    'tweet_count': metrics['tweet_count'],
-                    'listed_count': metrics['listed_count'],
-                    'created_at': user_data.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-            else:
-                logger.warning(f"No Twitter user found for {query}")
-                return self._get_simulated_metrics(query, source=self.SOURCE_TWITTER)
+            if not user or not user.data:
+                logger.error(f"No Twitter user found for {username}")
+                raise ValueError(f"No Twitter user found for {username}")
+            
+            user_data = user.data
+            metrics = user_data.public_metrics
+            
+            # Return the Twitter metrics
+            return {
+                'query': query,
+                'source': self.SOURCE_TWITTER,
+                'username': user_data.username,
+                'name': user_data.name,
+                'description': user_data.description,
+                'followers_count': metrics['followers_count'],
+                'following_count': metrics['following_count'],
+                'tweet_count': metrics['tweet_count'],
+                'listed_count': metrics['listed_count'],
+                'created_at': user_data.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
                 
         except Exception as e:
-            logger.error(f"Error getting Twitter metrics: {str(e)}")
-            return self._get_simulated_metrics(query, source=self.SOURCE_TWITTER)
+            logger.error(f"Error getting Twitter metrics for {query}: {str(e)}")
+            raise
     
     def _get_reddit_metrics(self, query: str) -> Dict[str, Any]:
         """
@@ -283,8 +309,7 @@ class SocialMetricsClient(BaseAPIClient):
             Telegram metrics as a dictionary
         """
         # Telegram API requires a more complex setup with a client session
-        # For simplicity, we'll use simulated metrics
-        logger.warning("Telegram API is not implemented. Using simulated metrics.")
+        # For simplicity, we'll use simulated metrics without logging a warning
         return self._get_simulated_metrics(query, source=self.SOURCE_TELEGRAM)
     
     def _get_external_api_metrics(self, query: str) -> Dict[str, Any]:
@@ -494,17 +519,24 @@ class SocialMetricsClient(BaseAPIClient):
         """
         if sources is None:
             sources = []
-            if TWITTER_AVAILABLE and self.twitter_client:
+            # Always include Twitter if the API library is available and TWITTER_BEARER_TOKEN is set
+            if TWITTER_AVAILABLE and self.twitter_bearer_token:
                 sources.append(self.SOURCE_TWITTER)
+                
+            # Include Reddit if available
             if REDDIT_AVAILABLE and self.reddit_client:
                 sources.append(self.SOURCE_REDDIT)
-            sources.append(self.SOURCE_TELEGRAM)  # Always include Telegram (simulated)
+                
+            # Include Telegram (simulated)
+            sources.append(self.SOURCE_TELEGRAM)
+            
+            # Include external API if URL is set
             if self.external_api_url:
                 sources.append(self.SOURCE_EXTERNAL_API)
             
-            # If no API clients are available, use simulated data
+            # If no sources are available, use only Telegram (simulated)
             if not sources:
-                sources = [self.SOURCE_TWITTER, self.SOURCE_REDDIT, self.SOURCE_TELEGRAM]
+                sources = [self.SOURCE_TELEGRAM]
         
         # Generate cache key
         cache_key = f"combined_metrics_{query}_{'-'.join(sources)}"

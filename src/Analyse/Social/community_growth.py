@@ -100,12 +100,23 @@ class CommunityGrowthIndicator(BaseIndicator):
             raise ValueError("No API keys provided for community metrics. Set TWITTER_BEARER_TOKEN, REDDIT_CLIENT_ID, and REDDIT_CLIENT_SECRET environment variables.")
         
         # Get combined metrics from multiple sources
-        metrics_response = self.social_metrics_client.get_combined_metrics(
-            query=coin_id
-        )
-        
-        if not metrics_response:
-            raise ValueError(f"Failed to get community metrics for {coin_id}")
+        try:
+            metrics_response = self.social_metrics_client.get_combined_metrics(
+                query=coin_id
+            )
+            
+            if not metrics_response:
+                raise ValueError(f"Failed to get community metrics for {coin_id}")
+        except Exception as e:
+            logger.error(f"Error getting community metrics for {coin_id}: {str(e)}")
+            # Create a minimal response with empty metrics
+            metrics_response = {
+                'current_metrics': {},
+                'growth_metrics': {},
+                'growth_history': [],
+                'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'error': str(e)
+            }
             
         # Extract metrics from response
         current_metrics = metrics_response.get('current_metrics', {})
