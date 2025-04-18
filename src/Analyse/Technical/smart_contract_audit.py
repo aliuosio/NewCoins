@@ -25,6 +25,9 @@ class SmartContractAuditIndicator(BaseIndicator):
     
     Awards up to 10 points for having multiple audits by top firms, no vulnerabilities, and a mature contract
     with high code quality and strong security practices.
+    
+    Note: This indicator is not applicable to cryptocurrencies that don't use smart contracts
+    in the traditional sense, such as Bitcoin and other first-generation blockchains.
     """
     
     # List of recognized audit firms with their reputation weight (1-10)
@@ -96,6 +99,33 @@ class SmartContractAuditIndicator(BaseIndicator):
         'test coverage': 8
     }
     
+    # List of cryptocurrencies that don't use smart contracts in the traditional sense
+    NON_SMART_CONTRACT_COINS = {
+        'BTC': 'bitcoin',       # Bitcoin
+        'LTC': 'litecoin',     # Litecoin
+        'XMR': 'monero',       # Monero
+        'DOGE': 'dogecoin',    # Dogecoin
+        'BCH': 'bitcoin-cash', # Bitcoin Cash
+        'BSV': 'bitcoin-sv',   # Bitcoin SV
+        'DGB': 'digibyte',     # DigiByte
+        'DASH': 'dash',        # Dash
+        'ZEC': 'zcash',        # Zcash
+        'XVG': 'verge',        # Verge
+        'RVN': 'ravencoin',    # Ravencoin
+        'VTC': 'vertcoin',     # Vertcoin
+        'KMD': 'komodo',       # Komodo
+        'XLM': 'stellar',      # Stellar (uses custom consensus)
+        'XRP': 'ripple',       # XRP (uses custom consensus)
+        'ADA': 'cardano',      # Cardano (uses Plutus, different from EVM)
+        'ALGO': 'algorand',    # Algorand (uses TEAL, different from EVM)
+        'HBAR': 'hedera-hashgraph', # Hedera (uses Solidity but different architecture)
+        'XTZ': 'tezos',        # Tezos (uses Michelson, different from EVM)
+        'EOS': 'eos',          # EOS (uses WebAssembly, different from EVM)
+        'ATOM': 'cosmos',      # Cosmos (uses CosmWasm, different from EVM)
+        'DOT': 'polkadot',     # Polkadot (uses Substrate, different from EVM)
+        'NEAR': 'near',        # NEAR (uses AssemblyScript, different from EVM)
+    }
+    
     def __init__(self, data_provider: IDataProvider):
         """
         Initialize the smart contract audit indicator
@@ -105,6 +135,28 @@ class SmartContractAuditIndicator(BaseIndicator):
         """
         super().__init__("smart_contract_audit", 10.0, data_provider)
     
+    def _is_not_applicable(self, symbol: str, data: Dict[str, Any]) -> bool:
+        """
+        Check if this indicator is not applicable to this cryptocurrency
+        
+        Args:
+            symbol: Symbol of the cryptocurrency
+            data: Data retrieved from the data provider
+            
+        Returns:
+            True if the indicator is not applicable, False otherwise
+        """
+        # Check if the cryptocurrency is in the list of non-smart contract coins
+        if symbol.upper() in self.NON_SMART_CONTRACT_COINS:
+            return True
+            
+        # Check if the coin ID is in the list of non-smart contract coins
+        coin_id = data.get('coin_id', f"mock-{symbol.lower()}")
+        if coin_id in self.NON_SMART_CONTRACT_COINS.values():
+            return True
+            
+        return False
+        
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate the smart contract audit score with enhanced security analysis"""
         # Get coin ID

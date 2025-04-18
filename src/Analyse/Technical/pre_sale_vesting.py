@@ -20,7 +20,30 @@ class PreSaleVestingIndicator(BaseIndicator):
     
     Awards up to 10 points for having no major unlocks in the near future.
     Enhanced with market impact analysis and liquidity-adjusted unlock risk assessment.
+    
+    Note: This indicator is not applicable to cryptocurrencies that didn't have a pre-sale
+    or token generation event, such as Bitcoin and other proof-of-work coins that were
+    mined from genesis without initial token distribution.
     """
+    
+    # List of cryptocurrencies that didn't have a pre-sale or token generation event
+    NO_PRESALE_COINS = {
+        'BTC': 'bitcoin',       # Bitcoin
+        'LTC': 'litecoin',     # Litecoin
+        'XMR': 'monero',       # Monero
+        'DOGE': 'dogecoin',    # Dogecoin
+        'BCH': 'bitcoin-cash', # Bitcoin Cash
+        'BSV': 'bitcoin-sv',   # Bitcoin SV
+        'DGB': 'digibyte',     # DigiByte
+        'DASH': 'dash',        # Dash
+        'ZEC': 'zcash',        # Zcash
+        'XVG': 'verge',        # Verge
+        'RVN': 'ravencoin',    # Ravencoin
+        'VTC': 'vertcoin',     # Vertcoin
+        'KMD': 'komodo',       # Komodo
+        'ETH': 'ethereum',     # Ethereum (original chain)
+        'ETC': 'ethereum-classic', # Ethereum Classic
+    }
     
     def __init__(self, data_provider: IDataProvider):
         """
@@ -40,6 +63,40 @@ class PreSaleVestingIndicator(BaseIndicator):
         self._imminent_days = 7  # Less than 7 days is imminent
         self._short_term_days = 14  # Less than 14 days is short-term
         self._medium_term_days = 30  # Less than 30 days is medium-term
+    
+    def _is_not_applicable(self, symbol: str, data: Dict[str, Any]) -> bool:
+        """
+        Check if this indicator is not applicable to this cryptocurrency
+        
+        Args:
+            symbol: Symbol of the cryptocurrency
+            data: Data retrieved from the data provider
+            
+        Returns:
+            True if the indicator is not applicable, False otherwise
+        """
+        # Check if the cryptocurrency is in the list of no-presale coins
+        if symbol.upper() in self.NO_PRESALE_COINS:
+            return True
+            
+        # Check if the coin ID is in the list of no-presale coins
+        coin_id = data.get('coin_id', f"mock-{symbol.lower()}")
+        if coin_id in self.NO_PRESALE_COINS.values():
+            return True
+            
+        # Check if the cryptocurrency has been around for more than 5 years
+        # as these typically have completed their vesting schedules
+        genesis_timestamp = data.get('genesis_date', None)
+        if genesis_timestamp:
+            try:
+                genesis_date = datetime.fromisoformat(genesis_timestamp.replace('Z', '+00:00'))
+                years_since_genesis = (datetime.now() - genesis_date).days / 365
+                if years_since_genesis > 5 and self._get_known_coin_vesting(coin_id) is None:
+                    return True
+            except (ValueError, TypeError):
+                pass
+                
+        return False
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate the pre-sale vesting score with enhanced market impact analysis"""
