@@ -15,9 +15,6 @@
 -- developer_activity_score: 5 points - Trending upwards
 -- community_growth_score: 5 points - >500 active members, constant discussion
 
--- Drop existing view if it exists
-DROP MATERIALIZED VIEW IF EXISTS analysis_summary;
-
 -- Create regular view
 CREATE OR REPLACE VIEW analysis_summary AS
 SELECT 
