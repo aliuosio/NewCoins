@@ -146,8 +146,12 @@ def run_analysis(args, verbose: bool):
 
 
 def main():
-    # Ensure base tables exist (coins)
+    # Create all necessary tables first
     create_tables()
+    create_technical_indicators_table()
+    create_social_indicators_table()
+    create_analysis_view()
+
     parser = argparse.ArgumentParser(description='PumpAndDump application')
     sub = parser.add_subparsers(dest='cmd')
     an = sub.add_parser('analyze', help='Run analysis')
@@ -156,13 +160,6 @@ def main():
     rp = sub.add_parser('report', help='View saved analysis')
     rp.add_argument('symbols', nargs='*', help='Cryptocurrency symbol(s) to view (optional)')
     args = parser.parse_args()
-
-    # Create tables first
-    create_technical_indicators_table()
-    create_social_indicators_table()
-    
-    # Create view after tables are created
-    create_analysis_view()
 
     if args.cmd == 'analyze':
         tech, social = run_analysis(args, args.verbose)
