@@ -72,6 +72,15 @@ class BaseIndicator(IIndicator):
             # Get data from provider if not provided
             if data is None:
                 data = self._data_provider.get_data(symbol)
+                
+            # Check if this indicator is not applicable to this cryptocurrency
+            if self._is_not_applicable(symbol, data):
+                self._logger.info(f"Indicator {self.name} is not applicable to {symbol}")
+                result = self._create_not_applicable_response(symbol)
+                # Cache the result
+                self._cache[cache_key] = result
+                self._cache_expiry[cache_key] = current_time + self.CACHE_TTL
+                return result
 
             # Perform the calculation - this is where subclasses implement logic
             result = self._calculate(symbol, data)
@@ -88,6 +97,10 @@ class BaseIndicator(IIndicator):
                 'max_score': self.max_score,
                 'calculation_time_ms': int((time.time() - start_time) * 1000)
             })
+            
+            # Cache the result
+            self._cache[cache_key] = result
+            self._cache_expiry[cache_key] = current_time + self.CACHE_TTL
             
             return result
             
@@ -164,6 +177,40 @@ class BaseIndicator(IIndicator):
         return None
 
     # --- Error Handling ---
+
+    def _is_not_applicable(self, symbol: str, data: Dict[str, Any]) -> bool:
+        """
+        Check if this indicator is not applicable to this cryptocurrency
+        
+        Args:
+            symbol: Symbol of the cryptocurrency
+            data: Data retrieved from the data provider
+            
+        Returns:
+            True if the indicator is not applicable, False otherwise
+        """
+        # Default implementation - override in subclasses
+        return False
+        
+    def _create_not_applicable_response(self, symbol: str) -> Dict[str, Any]:
+        """
+        Create a standardized response for when an indicator is not applicable
+        
+        Args:
+            symbol: Symbol of the cryptocurrency
+            
+        Returns:
+            Standardized not applicable response dictionary
+        """
+        return {
+            'symbol': symbol,
+            'indicator': self.name,
+            'score': None,  # None indicates N/A
+            'max_score': self.max_score,
+            'not_applicable': True,
+            'message': f"This indicator is not applicable to {symbol}",
+            'success': True
+        }
 
     def _create_error_response(self, symbol: str, error_message: str) -> Dict[str, Any]:
         """

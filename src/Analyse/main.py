@@ -59,10 +59,25 @@ def set_debug_level(debug: bool):
         print("\n=== DEBUG MODE ENABLED ===")
 
 def print_result(result, verbose=False, debug=False):
+    # Safety check - print the structure of the result object
+    logger.debug(f"Result for {result.indicator_name}: {vars(result)}")
+    
+    # Check if score is None, which indicates not applicable
+    score_is_none = result.score is None
+    
+    # Check if the indicator is explicitly marked as not applicable
+    explicitly_not_applicable = hasattr(result, 'not_applicable') and result.not_applicable
+    
+    # Combined check for not applicable status
+    not_applicable = score_is_none or explicitly_not_applicable
+    
     # Always show debug output if debug flag is set
     if debug:
         print(f"\nDEBUG DETAILS FOR {result.indicator_name}")
-        print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+        if not_applicable:
+            print(f"Status: Not Applicable")
+        else:
+            print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
         if hasattr(result, 'details') and isinstance(result.details, dict):
             print("\nDetails:")
             for k, v in result.details.items():
@@ -82,25 +97,35 @@ def print_result(result, verbose=False, debug=False):
         print(f"INDICATOR: {result.indicator_name}")
         print(f"{'=' * 50}")
         print(f"Symbol: {result.symbol}")
-        print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
-        if hasattr(result, 'error') and result.error:
-            print(f"ERROR: {result.error}")
+        if not_applicable:
+            print(f"Status: Not Applicable")
+            if hasattr(result, 'message'):
+                print(f"Message: {result.message}")
         else:
-            print("\nDetails:")
-            for k, v in result.details.items():
-                if isinstance(v, dict):
-                    print(f"  {k}:")
-                    for kk, vv in v.items(): print(f"    {kk}: {vv}")
-                elif isinstance(v, list):
-                    print(f"  {k}:")
-                    for item in v: print(f"    - {item}")
-                else:
-                    print(f"  {k}: {v}")
+            print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+            if hasattr(result, 'error') and result.error:
+                print(f"ERROR: {result.error}")
+            else:
+                print("\nDetails:")
+                for k, v in result.details.items():
+                    if isinstance(v, dict):
+                        print(f"  {k}:")
+                        for kk, vv in v.items(): print(f"    {kk}: {vv}")
+                    elif isinstance(v, list):
+                        print(f"  {k}:")
+                        for item in v: print(f"    - {item}")
+                    else:
+                        print(f"  {k}: {v}")
     else:
         # Concise output for normal mode
-        print(f"\n{result.indicator_name}: {result.score:.1f}/{result.max_score:.1f} ({result.score/result.max_score*100:.1f}%)")
-        if hasattr(result, 'error') and result.error:
-            print(f"  ERROR: {result.error}")
+        if not_applicable:
+            print(f"\n{result.indicator_name}: N/A (Not Applicable)")
+            if hasattr(result, 'message'):
+                print(f"  Note: {result.message}")
+        else:
+            print(f"\n{result.indicator_name}: {result.score:.1f}/{result.max_score:.1f} ({result.score/result.max_score*100:.1f}%)")
+            if hasattr(result, 'error') and result.error:
+                print(f"  ERROR: {result.error}")
 
 
 # Create data provider and indicator instances
@@ -170,12 +195,31 @@ def run_analysis(args, verbose=False, debug=False):
     return technical_results, social_results
 
 
+def check_table_exists(table_name):
+    """Check if a table exists in the database"""
+    from utils.db import DBConnection
+    
+    query = """
+    SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = %s
+    );
+    """
+    
+    with DBConnection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, (table_name,))
+            return cur.fetchone()[0]
+
 def main():
-    # Create all necessary tables first
-    create_tables()
-    create_technical_indicators_table()
-    create_social_indicators_table()
-    create_analysis_view()
+    # Initialize database tables if they don't exist
+    # We don't want to recreate tables on every run as that would delete previous data
+    if not check_table_exists('analyse_technical'):
+        # Tables don't exist, create them
+        create_tables()
+        create_technical_indicators_table()
+        create_social_indicators_table()
+        create_analysis_view()
 
     parser = argparse.ArgumentParser(description='PumpAndDump application')
     sub = parser.add_subparsers(dest='cmd')

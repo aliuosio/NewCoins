@@ -34,8 +34,7 @@ A comprehensive cryptocurrency analysis tool that evaluates various technical an
 
 # Analyze with verbose output
 
-      python main.py analyze BTC --verbose
-
+own
 ## Indicators
 
 ### Technical Indicators (70 points total)

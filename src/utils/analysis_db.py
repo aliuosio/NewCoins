@@ -56,9 +56,12 @@ def save_analysis_results(results: List, symbol: str, conn=None):
     table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
     
     try:
-        # Calculate overall scores
-        total_score = sum(r.score for r in results)
-        max_score = sum(r.max_score for r in results)
+        # Calculate overall scores - filter out None values (not applicable indicators)
+        valid_results = [r for r in results if r.score is not None]
+        total_score = sum(r.score for r in valid_results)
+        
+        # For max_score, we only count the indicators that are applicable
+        max_score = sum(r.max_score for r in valid_results)
         percentage = (total_score / max_score * 100) if max_score > 0 else 0
         
         # Determine recommendation
@@ -79,7 +82,15 @@ def save_analysis_results(results: List, symbol: str, conn=None):
         
         for result in results:
             indicator_name = result.indicator_name
-            indicator_data[f"{indicator_name}_score"] = result.score
+            
+            # Handle not applicable indicators
+            if result.score is None:
+                # Store a special value or flag to indicate not applicable
+                indicator_data[f"{indicator_name}_score"] = None
+                indicator_data[f"{indicator_name}_applicable"] = False
+            else:
+                indicator_data[f"{indicator_name}_score"] = result.score
+                indicator_data[f"{indicator_name}_applicable"] = True
             
             # Store raw details for future reference
             raw_data[indicator_name] = result.details
@@ -152,9 +163,9 @@ def save_analysis_results(results: List, symbol: str, conn=None):
         query = f"""
         INSERT INTO {table} ({', '.join(fields)})
         VALUES ({', '.join(placeholders)})
-        ON CONFLICT (symbol, analysis_date) 
+        ON CONFLICT (symbol) 
         DO UPDATE SET 
-            {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field not in ['symbol', 'analysis_date']])}
+            {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field != 'symbol'])}
         """
         
         if conn:

@@ -42,18 +42,7 @@ def create_analysis_view():
         logger.error(f"Error creating analysis view: {str(e)}")
         raise
 
-def refresh_analysis_view():
-    """
-    Refresh the analysis_summary materialized view to update with latest data.
-    """
-    try:
-        with DBConnection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("REFRESH MATERIALIZED VIEW analysis_summary")
-            logger.info("Analysis summary view refreshed successfully")
-    except Exception as e:
-        logger.error(f"Failed to refresh analysis summary view: {str(e)}")
-        raise
+# Regular views don't need to be refreshed as they're computed on-the-fly
 
 def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
     """
@@ -73,11 +62,20 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
                     symbol,
                     analysis_date,
                     total_technical_score,
+                    total_social_score,
                     total_score,
                     score_percentage,
                     recommendation,
-                    technical_data,
-                    social_data
+                    trading_volume_score,
+                    liquidity_score,
+                    whale_transactions_score,
+                    token_distribution_score,
+                    pre_sale_vesting_score,
+                    smart_contract_audit_score,
+                    social_volume_score,
+                    sentiment_analysis_score,
+                    developer_activity_score,
+                    community_growth_score
                 FROM analysis_summary
                 WHERE symbol = :symbol
                 AND analysis_date >= NOW() - INTERVAL ':days days'
@@ -92,11 +90,24 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
                     "symbol": result.symbol,
                     "analysis_date": result.analysis_date,
                     "total_technical_score": result.total_technical_score,
+                    "total_social_score": result.total_social_score,
                     "total_score": result.total_score,
                     "score_percentage": result.score_percentage,
                     "recommendation": result.recommendation,
-                    "technical_data": result.technical_data,
-                    "social_data": result.social_data
+                    "technical_indicators": {
+                        "trading_volume": result.trading_volume_score,
+                        "liquidity": result.liquidity_score,
+                        "whale_transactions": result.whale_transactions_score,
+                        "token_distribution": result.token_distribution_score,
+                        "pre_sale_vesting": result.pre_sale_vesting_score,
+                        "smart_contract_audit": result.smart_contract_audit_score
+                    },
+                    "social_indicators": {
+                        "social_volume": result.social_volume_score,
+                        "sentiment_analysis": result.sentiment_analysis_score,
+                        "developer_activity": result.developer_activity_score,
+                        "community_growth": result.community_growth_score
+                    }
                 }
             return None
     except Exception as e:

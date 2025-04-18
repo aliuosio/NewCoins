@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS {table} (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     
-    UNIQUE(symbol, analysis_date)
+    UNIQUE(symbol) -- Only one record per coin
 );
 
 -- Add column comments
