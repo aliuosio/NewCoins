@@ -37,13 +37,17 @@ def create_technical_indicators_table():
         logger.error(f"Error creating analysis table: {e}")
         raise
 
-def save_analysis_results(results: List, symbol: str):
+def save_analysis_results(results: List, symbol: str, conn=None):
     """
     Save the analysis results to the database.
     
     Args:
         results: List of indicator results
         symbol: Cryptocurrency symbol
+        conn: Optional database connection (if not provided, will create one)
+    
+    Returns:
+        Tuple of (SQL query, parameters) if conn is None, otherwise executes the query
     """
     if not results:
         logger.warning(f"No analysis results to save for {symbol}")
@@ -145,22 +149,58 @@ def save_analysis_results(results: List, symbol: str):
         fields = list(insert_data.keys())
         placeholders = [f"%({field})s" for field in fields]
         
-        with DBConnection() as conn:
-            with conn.cursor() as cur:
-                query = f"""
-                INSERT INTO {table} ({', '.join(fields)})
-                VALUES ({', '.join(placeholders)})
-                ON CONFLICT (symbol, analysis_date) 
-                DO UPDATE SET 
-                    {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field not in ['symbol', 'analysis_date']])}
-                """
-                cur.execute(query, insert_data)
-            conn.commit()
+        query = f"""
+        INSERT INTO {table} ({', '.join(fields)})
+        VALUES ({', '.join(placeholders)})
+        ON CONFLICT (symbol, analysis_date) 
+        DO UPDATE SET 
+            {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field not in ['symbol', 'analysis_date']])}
+        """
         
-        logger.info(f"Successfully saved analysis results for {symbol}")
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute(query, insert_data)
+            return None
+        else:
+            return query, insert_data
     except Exception as e:
         logger.error(f"Error saving analysis results for {symbol}: {e}")
         raise
+
+def save_analysis_results_batch(results_dict: Dict[str, List], conn=None):
+    """
+    Save analysis results for multiple symbols in a single transaction.
+    
+    Args:
+        results_dict: Dictionary mapping symbol to list of indicator results
+        conn: Optional database connection (if not provided, will create one)
+    """
+    if not results_dict:
+        logger.warning("No analysis results to save")
+        return
+    
+    # Collect all queries and parameters
+    queries = []
+    for symbol, results in results_dict.items():
+        query_and_params = save_analysis_results(results, symbol, conn)
+        if query_and_params:
+            queries.append(query_and_params)
+    
+    if not queries:
+        return
+    
+    if not conn:
+        with DBConnection() as conn:
+            with conn.cursor() as cur:
+                for query, params in queries:
+                    cur.execute(query, params)
+            conn.commit()
+    else:
+        with conn.cursor() as cur:
+            for query, params in queries:
+                cur.execute(query, params)
+
+    logger.info(f"Successfully saved analysis results for {len(results_dict)} symbols")
 
 def get_latest_analysis(symbols: List[str] = None, limit: int = 10):
     """

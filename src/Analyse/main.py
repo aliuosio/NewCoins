@@ -168,9 +168,33 @@ def main():
     if args.cmd == 'analyze':
         tech, social = run_analysis(args, args.verbose)
         # Always save results to database
-        symbol = args.symbols[0]
-        save_analysis_results(tech, symbol)
-        save_social_results(social, symbol)
+        tech_results_dict = {}
+        social_results_dict = {}
+        
+        # Split comma-separated symbols and flatten the list
+        all_symbols = []
+        for symbol in args.symbols:
+            all_symbols.extend(symbol.split(','))
+        
+        # Remove duplicates and sort
+        all_symbols = sorted(set(all_symbols))
+        
+        # Group results by symbol
+        tech_index = 0
+        social_index = 0
+        for symbol in all_symbols:
+            symbol_tech_results = tech[tech_index:tech_index+len(technical_indicators)]
+            symbol_social_results = social[social_index:social_index+len(social_indicators)]
+            
+            tech_results_dict[symbol] = symbol_tech_results
+            social_results_dict[symbol] = symbol_social_results
+            
+            tech_index += len(technical_indicators)
+            social_index += len(social_indicators)
+        
+        # Save all results in batch
+        save_analysis_results_batch(tech_results_dict)
+        save_social_results_batch(social_results_dict)
     elif args.cmd == 'report':
         # If no symbols specified, get all analyses
         if not args.symbols:

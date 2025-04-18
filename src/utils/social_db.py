@@ -38,13 +38,17 @@ def create_social_indicators_table():
         logger.error(f"Error creating social indicators table: {e}")
         raise
 
-def save_social_results(results: List, symbol: str):
+def save_social_results(results: List, symbol: str, conn=None):
     """
     Save the social indicators results to the database.
     
     Args:
         results: List of social indicator results (IndicatorResult objects)
         symbol: Cryptocurrency symbol
+        conn: Optional database connection (if not provided, will create one)
+    
+    Returns:
+        Tuple of (SQL query, parameters) if conn is None, otherwise executes the query
     """
     if not results:
         logger.warning(f"No social results to save for {symbol}")
@@ -88,22 +92,58 @@ def save_social_results(results: List, symbol: str):
         fields = list(insert_data.keys())
         placeholders = [f"%({field})s" for field in fields]
         
+        query = f"""
+        INSERT INTO {table} ({', '.join(fields)})
+        VALUES ({', '.join(placeholders)})
+        ON CONFLICT (symbol, analysis_date) 
+        DO UPDATE SET 
+            {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field not in ['symbol', 'analysis_date']])}
+        """
+        
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute(query, insert_data)
+            return None
+        else:
+            return query, insert_data
+    except Exception as e:
+        logger.error(f"Error saving social results for {symbol}: {e}")
+        raise
+
+def save_social_results_batch(results_dict: Dict[str, List], conn=None):
+    """
+    Save social results for multiple symbols in a single transaction.
+    
+    Args:
+        results_dict: Dictionary mapping symbol to list of social indicator results
+        conn: Optional database connection (if not provided, will create one)
+    """
+    if not results_dict:
+        logger.warning("No social results to save")
+        return
+    
+    # Collect all queries and parameters
+    queries = []
+    for symbol, results in results_dict.items():
+        query_and_params = save_social_results(results, symbol, conn)
+        if query_and_params:
+            queries.append(query_and_params)
+    
+    if not queries:
+        return
+    
+    if not conn:
         with DBConnection() as conn:
             with conn.cursor() as cur:
-                query = f"""
-                INSERT INTO {table} ({', '.join(fields)})
-                VALUES ({', '.join(placeholders)})
-                ON CONFLICT (symbol, analysis_date) 
-                DO UPDATE SET 
-                    {', '.join([f"{field} = EXCLUDED.{field}" for field in fields if field not in ['symbol', 'analysis_date']])}
-                """
-                cur.execute(query, insert_data)
+                for query, params in queries:
+                    cur.execute(query, params)
             conn.commit()
-        
-        logger.info(f"Successfully saved social indicators for {symbol}")
-    except Exception as e:
-        logger.error(f"Error saving social indicators for {symbol}: {e}")
-        raise
+    else:
+        with conn.cursor() as cur:
+            for query, params in queries:
+                cur.execute(query, params)
+
+    logger.info(f"Successfully saved social results for {len(results_dict)} symbols")
 
 def get_latest_social(symbols: List[str] = None, limit: int = 10):
     """
