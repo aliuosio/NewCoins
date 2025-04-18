@@ -1,4 +1,4 @@
--- SQL script to create the crypto_analysis table schema
+-- SQL script to create the analyse_technical table schema
 -- This table stores the results of cryptocurrency analysis
 
 -- INDICATOR SCORING EXPLANATIONS:

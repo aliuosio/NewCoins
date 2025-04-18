@@ -17,9 +17,9 @@ logger = logging.getLogger("analysis_db")
 
 def create_analysis_table():
     """
-    Create the crypto_analysis table if it doesn't exist.
+    Create the analyse_technical table if it doesn't exist.
     """
-    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'crypto_analysis')
+    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
     # Load SQL from project-level sql folder
     sql_path = Path(__file__).parent.parent / "sql" / "create_analysis_table.sql"
     
@@ -49,7 +49,7 @@ def save_analysis_results(results: List, symbol: str):
         logger.warning(f"No analysis results to save for {symbol}")
         return
     
-    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'crypto_analysis')
+    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
     
     try:
         # Calculate overall scores
@@ -178,7 +178,7 @@ def get_latest_analysis(symbol: str = None, limit: int = 10):
     Returns:
         List of analysis results
     """
-    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'crypto_analysis')
+    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
     
     try:
         with DBConnection() as conn:

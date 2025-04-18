@@ -19,7 +19,7 @@ def create_social_table():
     """
     Create the social indicators table if it doesn't exist.
     """
-    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'crypto_social')
+    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
     coins_table = os.getenv('POSTGRES_TABLE', 'coins')
     # Load SQL from project-level sql folder
     sql_path = Path(__file__).parent.parent / "sql" / "create_social_table.sql"
@@ -50,7 +50,7 @@ def save_social_results(results: List, symbol: str):
         logger.warning(f"No social results to save for {symbol}")
         return
     
-    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'crypto_social')
+    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
     
     try:
         # Calculate overall social score
@@ -122,7 +122,7 @@ def get_latest_social(symbol: str = None, limit: int = 10):
     Returns:
         List of social indicator results
     """
-    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'crypto_social')
+    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
     
     try:
         with DBConnection() as conn:

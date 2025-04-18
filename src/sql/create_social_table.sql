@@ -1,4 +1,4 @@
--- SQL script to create the social indicators table schema
+-- SQL script to create the analyse_social table schema
 -- Usage: Placeholder {table} is formatted in Python before execution
 -- This table tracks social metrics and sentiment for cryptocurrencies
 

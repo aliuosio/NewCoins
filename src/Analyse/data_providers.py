@@ -406,24 +406,68 @@ class CoinGeckoProvider(BaseDataProvider):
         Returns:
             Coin data dictionary
         """
+        # Check cache first
+        cache_key = self._get_cache_key(f"{self._base_url}/coins/{coin_id}_full")
+        cached_data = self._get_from_cache(cache_key)
+        if cached_data:
+            if isinstance(cached_data, requests.Response):
+                return cached_data.json()
+            return cached_data
+            
         try:
+            # Important: Set market_data to 'true' to get supply and market cap information
+            # needed for token distribution analysis
             params = {
                 'localization': 'false',
                 'tickers': 'false',
-                'market_data': 'false',
+                'market_data': 'true',  # Changed to true to get market data
                 'community_data': 'true',
                 'developer_data': 'true',
                 'sparkline': 'false'
             }
             
+            # Add API key if available
+            if self._api_key:
+                params['x_cg_pro_api_key'] = self._api_key
+            
             response = self._make_api_request(
                 f"{self._base_url}/coins/{coin_id}",
                 params=params
             )
-            return response.json()
+            
+            # Cache the response
+            result = response.json()
+            self._cache_response(cache_key, result)
+            return result
+            
         except Exception as e:
             self._logger.error(f"Error getting coin data for {coin_id}: {str(e)}")
-            return {}
+            
+            # If we can't get full data, try a simpler request with minimal data
+            try:
+                # Fallback to a simpler request
+                simple_params = {
+                    'localization': 'false',
+                    'tickers': 'false',
+                    'sparkline': 'false'
+                }
+                
+                # Add API key if available
+                if self._api_key:
+                    simple_params['x_cg_pro_api_key'] = self._api_key
+                
+                response = self._make_api_request(
+                    f"{self._base_url}/coins/{coin_id}",
+                    params=simple_params
+                )
+                
+                result = response.json()
+                self._cache_response(cache_key, result)
+                return result
+                
+            except Exception as fallback_error:
+                self._logger.error(f"Fallback request also failed for {coin_id}: {str(fallback_error)}")
+                return {}
     
     def _get_market_chart(self, coin_id: str, days: int = 30) -> Dict[str, List]:
         """

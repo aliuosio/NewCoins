@@ -30,7 +30,7 @@ The `main.py` script provides two main commands: `analyze` and `report`.
 
 #### Analyzing Cryptocurrencies
 
-```bash
+```bashown
 # Basic usage - analyze Bitcoin (includes both technical and social indicators)
 python main.py analyze BTC
 
@@ -43,7 +43,7 @@ python main.py analyze BTC --verbose
 # Save analysis results to database
 python main.py analyze BTC --save
 ```
-
+co
 #### Viewing Saved Analysis Results
 
 ```bash
