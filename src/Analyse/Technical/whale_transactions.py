@@ -83,13 +83,13 @@ class WhaleTransactionsIndicator(BaseIndicator):
             self._logger.error(f"Required: {min_hours} hours")
             self._logger.error(f"Available: prices={len(prices)}, volumes={len(volumes)}")
             return {
-                'score': 0,
+                'score': 15,
                 'details': {
                     'error': 'Not enough historical data',
                     'required_data_points': min_hours,
                     'available_price_points': len(prices),
                     'available_volume_points': len(volumes),
-                    'note': f'This indicator requires at least {min_hours} hours of price and volume history.'
+                    'note': f'Full score awarded due to missing data: requires at least {min_hours} hours of price and volume history.'
                 }
             }
             
@@ -116,10 +116,10 @@ class WhaleTransactionsIndicator(BaseIndicator):
         if not price_volume_data:
             self._logger.error(f"Could not normalize price and volume data for {symbol}")
             return {
-                'score': 0,
+                'score': 15,
                 'details': {
                     'error': 'Could not normalize price and volume data',
-                    'note': 'This indicator requires matching timestamps for price and volume data.'
+                    'note': 'Full score awarded due to missing or mismatched price and volume data.'
                 }
             }
 
@@ -135,10 +135,10 @@ class WhaleTransactionsIndicator(BaseIndicator):
         price_volume_data = self._normalize_price_volume_data(prices, volumes)
         if not price_volume_data:
             return {
-                'score': 0,
+                'score': 15,
                 'details': {
                     'error': 'Could not normalize price and volume data',
-                    'note': 'This indicator requires matching timestamps for price and volume data.'
+                    'note': 'Full score awarded due to missing or mismatched price and volume data.'
                 }
             }
             
