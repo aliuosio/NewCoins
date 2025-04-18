@@ -45,7 +45,8 @@ class TokenDistributionIndicator(BaseIndicator):
         """
         # Extract coin data
         coin_data = data.get('coin_data', {})
-        coin_id = data.get('coin_id', '').lower()
+        coin_id_raw = data.get('coin_id', '')
+        coin_id = coin_id_raw.lower() if isinstance(coin_id_raw, str) else ''
         
         # Check if we have any coin data
         if not coin_data:
