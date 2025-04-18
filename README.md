@@ -20,24 +20,21 @@ A comprehensive cryptocurrency analysis tool that evaluates various technical an
 3. Configure your environment variables in `.env` file
 4. Build and start the containers:
 
-```bash
-docker-compose up -d
-```
+   docker-compose up -d
 
 ### Using the Analyzer Tool
 
-```bashown
 # Basic usage - analyze Bitcoin (includes both technical and social indicators)
-python main.py analyze BTC
+   
+      python main.py analyze BTC
 
 # Analyze multiple cryptocurrencies
-python main.py analyze BTC,ETH,SOL,DOGE
+
+      python main.py analyze BTC,ETH,SOL,DOGE
 
 # Analyze with verbose output
-python main.py analyze BTC --verbose
 
-# Results are automatically saved to database
-```
+      python main.py analyze BTC --verbose
 
 ## Indicators
 
