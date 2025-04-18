@@ -6,16 +6,9 @@ LABEL maintainer="Osiozekhai Aliu"
 RUN apt update && apt upgrade -y && \
     apt install -y cron postgresql-client nano && \
     apt clean && \
-    rm -rf /var/lib/apt/lis ts/*
-
-RUN service cron start
-
-RUN echo "* * * * * echo 'Cron is running' >> /var/log/cron.log 2>&1" | crontab -
-
-RUN echo 'export EDITOR=nano' >> /root/.bashrc
-RUN echo 'export EDITOR=nano' >> /root/.profile
-
-COPY requirements.txt /src/requirements.txt
-RUN pip install --upgrade pip && pip install -r /src/requirements.txt
+    rm -rf /var/lib/apt/lists/* && \
+    echo "* * * * * echo 'Cron is running' >> /var/log/cron.log 2>&1" | crontab - && \
+    echo 'export EDITOR=nano' >> /root/.bashrc && \
+    echo 'export EDITOR=nano' >> /root/.profile
 
 CMD ["cron", "-f"]
