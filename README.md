@@ -10,6 +10,36 @@ A comprehensive cryptocurrency analysis tool that evaluates various technical an
 - Provides historical data viewing and comparison
 - Supports multiple cryptocurrencies in a single analysis
 - Caches API responses for improved performance
+- Tracks newly listed cryptocurrencies from MEXC exchange
+- Monitors upcoming coin listings for investment opportunities
+- Filters coins by listing timeframe
+
+## Project Modules
+
+### Analyse Module
+The core analysis engine that evaluates cryptocurrencies using both technical and social indicators:
+- **Technical Indicators**: Trading volume, liquidity, whale transactions, token distribution, pre-sale vesting, and smart contract audits
+- **Social Indicators**: Sentiment analysis, developer activity, community growth, and Google Trends data
+- Produces a comprehensive score and investment recommendation
+
+### NewCoins Module
+
+A tool for tracking new cryptocurrency listings:
+
+- **API Integration**: Connects to MEXC exchange API for coin listings data
+- **Time Filtering**: Configurable to track coins in specific time periods (24h, 48h, 72h)
+- **Historical Data**: Retrieves coins listed in the past (last 24h, 48h)
+- **Database Storage**: Saves coin data to PostgreSQL for analysis
+- **Metadata**: Stores coin details including name, symbol, and listing times
+- **Command-line Interface**: Parameter-based filtering for workflow integration
+
+Useful for traders interested in newly listed tokens, which often have higher volatility during initial trading periods.
+
+### Database Structure
+- Uses PostgreSQL for persistent storage
+- Maintains unique records for each cryptocurrency
+- Updates existing records when new analyses are performed
+- Supports historical data tracking and comparison
 
 ## Usage
 
@@ -32,9 +62,36 @@ A comprehensive cryptocurrency analysis tool that evaluates various technical an
 
       python main.py analyze BTC,ETH,SOL,DOGE
 
-# Analyze with verbose output
+#### Analyze with verbose output
 
-own
+```bash
+python main.py analyze BTC --verbose
+```
+
+### Using the NewCoins Tool
+
+The NewCoins module fetches information about newly listed cryptocurrencies from the MEXC exchange API. This helps you discover and analyze new coins as soon as they're listed.
+
+#### Fetch coins scheduled to be listed in the next 24 hours (default)
+
+```bash
+python src/NewCoins/main.py
+```
+
+#### Fetch coins scheduled to be listed in the next X hours
+
+```bash
+python src/NewCoins/main.py 48  # For next 48 hours
+```
+
+#### Fetch coins that were listed in the past X hours
+
+```bash
+python src/NewCoins/main.py -24  # For past 24 hours
+```
+
+The fetched coins are automatically saved to the database for later analysis.
+
 ## Indicators
 
 ### Technical Indicators (70 points total)
