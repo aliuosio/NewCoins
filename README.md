@@ -41,21 +41,6 @@ python main.py analyze BTC,ETH,SOL,DOGE
 python main.py analyze BTC --verbose
 
 # Results are automatically saved to database
-```
-
-co
-
-#### Viewing Saved Analysis Results
-
-```bash
-# View all analyses (both technical and social)
-python main.py report
-
-# View analysis for specific symbols
-python main.py report BTC ETH
-
-# View all analyses if no symbols specified
-python main.py report
 
 # Limit to analyses from the last N days
 python main.py report --days 7

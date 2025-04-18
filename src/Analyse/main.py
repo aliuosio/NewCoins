@@ -157,8 +157,6 @@ def main():
     an = sub.add_parser('analyze', help='Run analysis')
     an.add_argument('symbols', nargs='+', help='Cryptocurrency symbol(s) to analyze (comma-separated)')
     an.add_argument('--verbose', action='store_true', help='Detailed output')
-    rp = sub.add_parser('report', help='View saved analysis')
-    rp.add_argument('symbols', nargs='*', help='Cryptocurrency symbol(s) to view (optional)')
     args = parser.parse_args()
 
     if args.cmd == 'analyze':
@@ -191,19 +189,6 @@ def main():
         # Save all results in batch
         save_analysis_results_batch(tech_results_dict)
         save_social_results_batch(social_results_dict)
-    elif args.cmd == 'report':
-        # If no symbols specified, get all analyses
-        if not args.symbols:
-            ta = get_latest_analysis()
-            sa = get_latest_social()
-        else:
-            # Get analysis for specified symbols
-            ta = get_latest_analysis(symbols=args.symbols)
-            sa = get_latest_social(symbols=args.symbols)
-        print("\n=== ANALYSIS HISTORY ===")
-        print(tabulate([list(t.values()) for t in ta], headers=ta[0].keys() if ta else []))
-        print("\n=== SOCIAL HISTORY ===")
-        print(tabulate([list(s.values()) for s in sa], headers=sa[0].keys() if sa else []))
     else:
         parser.print_help()
 
