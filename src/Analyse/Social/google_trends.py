@@ -53,6 +53,13 @@ class GoogleTrendsIndicator(BaseIndicator):
         os.makedirs(self._cache_dir, exist_ok=True)
         self._cache_duration = 3600  # Cache duration in seconds (1 hour)
         logger.info(f"Using Google Trends cache directory: {self._cache_dir} with {self._cache_duration}s duration")
+        
+        # Rate limiting settings
+        self._last_request_time = 0
+        self._request_interval = 60  # Minimum interval between requests in seconds (1 minute)
+        self._max_retries = 5
+        self._base_delay = 2.0  # Start with 2 seconds delay
+        self._max_delay = 60  # Maximum delay of 60 seconds
         # Note: The old version mapped this to 'google_trends' in the DB.
 
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -76,12 +83,27 @@ class GoogleTrendsIndicator(BaseIndicator):
         # Check if we have cached data
         cached_data = self._get_from_cache(search_term)
         if cached_data:
+            logger.info(f"Found cached Google Trends data for {search_term}")
             # We have cached data, calculate the score and return it
             score = self._calculate_indicator_score(cached_data)
             cached_data['score'] = score
             return cached_data
         
-        # No cached data available, return a minimal response indicating no data
+        # No cached data available
+        logger.info(f"No cached Google Trends data found for {search_term}. Attempting to populate cache...")
+        
+        # Try to populate the cache with real data
+        if self._populate_cache(symbol, data):
+            logger.info(f"Successfully populated cache for {search_term}")
+            # Re-fetch from cache now that it's populated
+            cached_data = self._get_from_cache(search_term)
+            if cached_data:
+                score = self._calculate_indicator_score(cached_data)
+                cached_data['score'] = score
+                return cached_data
+        
+        # If we still don't have data after trying to populate cache, return minimal data
+        logger.info(f"Failed to get Google Trends data for {search_term}. Returning minimal data.")
         minimal_data = {
             'search_term': search_term,
             'simulated': True,  # Mark as simulated
@@ -147,9 +169,16 @@ class GoogleTrendsIndicator(BaseIndicator):
             return False
 
     def _fetch_real_trends_data(self, search_term: str, coin_id: str) -> Dict[str, Any]:
-        """Fetch real Google Trends data using PyTrends."""
+        """Fetch real Google Trends data using PyTrends with enhanced retry logic."""
         if not PYTRENDS_AVAILABLE:
             raise ImportError("PyTrends library is not installed.")
+
+        # Respect rate limiting
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < self._request_interval:
+            logger.debug(f"Waiting {self._request_interval - time_since_last:.1f} seconds to respect rate limits")
+            time.sleep(self._request_interval - time_since_last)
 
         # There's a compatibility issue with the PyTrends library and newer versions of the requests library
         # The library uses 'method_whitelist' which has been renamed to 'allowed_methods' in newer versions
@@ -186,39 +215,43 @@ class GoogleTrendsIndicator(BaseIndicator):
             # Set pandas option to avoid the FutureWarning
             pd.set_option('future.no_silent_downcasting', True)
             
-            # Alternatively, we could monkey patch the fillna method, but the option is cleaner
-            # original_fillna = pd.DataFrame.fillna
-            # def patched_fillna(self, *args, **kwargs):
-            #     result = original_fillna(self, *args, **kwargs)
-            #     return result.infer_objects(copy=False) if hasattr(result, 'infer_objects') else result
-            # pd.DataFrame.fillna = patched_fillna
-            
             logger.debug("Set pandas option to fix FutureWarning about fillna")
         except Exception as e:
             logger.warning(f"Failed to set pandas option: {e}")
         
-        # Now create the PyTrends instance with minimal parameters to reduce chance of errors
-        try:
-            pytrends = TrendReq(hl='en-US', tz=360)
-        except Exception as e:
-            logger.error(f"Failed to create PyTrends instance: {e}")
-            raise
-        kw_list = [search_term, f"{search_term} crypto"] # Use base term and crypto-specific term
-        timeframe = 'now 7-d'  # Last 7 days
+        # Enhanced retry logic with exponential backoff
+        for attempt in range(self._max_retries):
+            try:
+                # Now create the PyTrends instance with minimal parameters to reduce chance of errors
+                pytrends = TrendReq(hl='en-US', tz=360)
+                kw_list = [search_term, f"{search_term} crypto"] # Use base term and crypto-specific term
+                timeframe = 'now 7-d'  # Last 7 days
 
-        logger.debug(f"Requesting Google Trends for: {kw_list} timeframe: {timeframe}")
-        pytrends.build_payload(kw_list, cat=0, timeframe=timeframe, geo='', gprop='')
+                logger.debug(f"Attempt {attempt + 1}/{self._max_retries}: Requesting Google Trends for: {kw_list} timeframe: {timeframe}")
+                pytrends.build_payload(kw_list, cat=0, timeframe=timeframe, geo='', gprop='')
 
-        interest_over_time_df = pytrends.interest_over_time()
-        # related_queries_dict = pytrends.related_queries() # Fetching related queries can be slow/error-prone
+                interest_over_time_df = pytrends.interest_over_time()
+                
+                if interest_over_time_df.empty or len(interest_over_time_df) < 2:
+                    logger.warning(f"Insufficient Google Trends data points found for {search_term}")
+                    raise ValueError(f"Insufficient Google Trends data points for {search_term}")
 
-        if interest_over_time_df.empty or len(interest_over_time_df) < 2:
-             logger.warning(f"Insufficient Google Trends data points found for {search_term}")
-             # Fallback to simulation within this function if needed, or raise error
-             # For simplicity, we'll let the main _calculate handle fallback
-             raise ValueError(f"Insufficient Google Trends data points for {search_term}")
+                return self._process_interest_data(interest_over_time_df, search_term)
 
+            except Exception as e:
+                if attempt == self._max_retries - 1:  # Last attempt
+                    logger.error(f"Failed to fetch Google Trends data after {self._max_retries} attempts: {e}")
+                    raise
+                else:
+                    # Calculate delay with exponential backoff, capped at max_delay
+                    delay = min(self._max_delay, self._base_delay * (2 ** attempt))
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.1f} seconds...")
+                    time.sleep(delay)
 
+        return None
+
+    def _process_interest_data(self, interest_over_time_df, search_term):
+        """Process Google Trends interest data and return formatted results."""
         # Process interest over time
         interest_history = []
         for date, row in interest_over_time_df.iterrows():
@@ -228,9 +261,41 @@ class GoogleTrendsIndicator(BaseIndicator):
             if f"{search_term} crypto" in row: interest_value = max(interest_value, row[f"{search_term} crypto"])
             # Skip 'isPartial' column if present
             if 'isPartial' in row and row['isPartial']:
-                 logger.debug(f"Skipping partial data point for {date}")
-                 continue
+                logger.debug(f"Skipping partial data point for {date}")
+                continue
             interest_history.append({'date': date.strftime('%Y-%m-%d'), 'value': interest_value})
+
+        if len(interest_history) < 2:
+            raise ValueError(f"Insufficient non-partial Google Trends data points for {search_term}")
+
+        # Calculate trend metrics from real data
+        current_interest = interest_history[-1]['value']
+        # Use first point as previous for 7-day trend calculation
+        previous_interest = interest_history[0]['value']
+
+        percent_change = ((current_interest - previous_interest) / max(previous_interest, 1)) * 100 # Avoid div by zero
+        trend_direction = max(-1.0, min(1.0, percent_change / 50)) # Scale change to -1 to 1 (50% change = full trend)
+        trend_intensity = min(1.0, abs(percent_change) / 50) # Intensity based on magnitude of change
+
+        # Generate related queries (simplified simulation)
+        related_queries = self._generate_related_queries(search_term)
+
+        return {
+            'search_term': search_term,
+            'simulated': False,  # Mark as real data
+            'trend_data': {
+                'current_interest': current_interest,
+                'previous_interest': previous_interest,
+                'percent_change': percent_change,
+                'trend_direction': trend_direction,
+                'trend_intensity': trend_intensity,
+                'trend_status': 'Real Data Available'
+            },
+            'interest_history': interest_history,
+            'related_queries': related_queries,
+            'no_data': False,  # Flag to indicate data is available
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
 
         if len(interest_history) < 2:
             raise ValueError(f"Insufficient non-partial Google Trends data points for {search_term}")
