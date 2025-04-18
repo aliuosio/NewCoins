@@ -46,24 +46,32 @@ class BaseIndicator(IIndicator):
         """Get the maximum possible score for this indicator"""
         return self._max_score
     
-    def calculate(self, symbol: str) -> Dict[str, Any]:
+    def calculate(self, symbol: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Calculate the indicator score for a given cryptocurrency
         
         Args:
-            symbol: Symbol of the cryptocurrency (e.g., 'BTC', 'ETH')
-
+            symbol: Symbol of the cryptocurrency
+            data: Data to use for calculation (optional)
+            
         Returns:
-            Dictionary containing score and calculation details
+            Dictionary with calculation results
         """
         start_time = time.time()
 
         try:
-            # Get data from provider - subclasses might override this or use cache
-            # For simplicity, the base class assumes direct data fetching
-            # Subclasses needing caching should implement it within their _calculate method
-            # using _is_cache_valid and _cache_result.
-            data = self._data_provider.get_data(symbol)
+            # Check cache first
+            cache_key = f"{self._name}_{symbol}"
+            current_time = time.time()
+            
+            # Check if we have cached data that hasn't expired
+            if cache_key in self._cache and current_time < self._cache_expiry[cache_key]:
+                self._logger.debug(f"Using cached data for {symbol}")
+                return self._cache[cache_key]
+            
+            # Get data from provider if not provided
+            if data is None:
+                data = self._data_provider.get_data(symbol)
 
             # Perform the calculation - this is where subclasses implement logic
             result = self._calculate(symbol, data)

@@ -40,8 +40,8 @@ from utils.social_db import create_social_indicators_table, save_social_results,
 from utils.analysis_view import create_analysis_view
 
 # Configure logging
-# Default to WARNING level to reduce output in normal mode
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Default to INFO level, but allow debug level if requested
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("pumptandump")
 
 # Set specific loggers to higher levels to reduce noise
@@ -50,7 +50,32 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("pytrends").setLevel(logging.ERROR)
 logging.getLogger("praw").setLevel(logging.WARNING)
 
-def print_result(result, verbose=False):
+# Function to set debug level if needed
+def set_debug_level(debug: bool):
+    if debug:
+        logger.setLevel(logging.DEBUG)
+        logging.getLogger("indicator_runner").setLevel(logging.DEBUG)
+        logging.getLogger("whale_transactions").setLevel(logging.DEBUG)
+        print("\n=== DEBUG MODE ENABLED ===")
+
+def print_result(result, verbose=False, debug=False):
+    # Always show debug output if debug flag is set
+    if debug:
+        print(f"\nDEBUG DETAILS FOR {result.indicator_name}")
+        print(f"Score: {result.score:.2f}/{result.max_score:.2f} ({result.score/result.max_score*100:.1f}%)")
+        if hasattr(result, 'details') and isinstance(result.details, dict):
+            print("\nDetails:")
+            for k, v in result.details.items():
+                if isinstance(v, dict):
+                    print(f"  {k}:")
+                    for kk, vv in v.items(): print(f"    {kk}: {vv}")
+                elif isinstance(v, list):
+                    print(f"  {k}:")
+                    for item in v: print(f"    - {item}")
+                else:
+                    print(f"  {k}: {v}")
+        print("\n")
+    
     if verbose:
         # Detailed output for verbose mode
         print(f"\n{'=' * 50}")
@@ -99,7 +124,7 @@ social_indicators = [
 
 runner = IndicatorRunner()
 
-def run_analysis(args, verbose: bool):
+def run_analysis(args, verbose=False, debug=False):
     # Set logging level based on verbose flag
     if verbose:
         # In verbose mode, set main loggers to INFO level
@@ -157,10 +182,11 @@ def main():
     an = sub.add_parser('analyze', help='Run analysis')
     an.add_argument('symbols', nargs='+', help='Cryptocurrency symbol(s) to analyze (comma-separated)')
     an.add_argument('--verbose', action='store_true', help='Detailed output')
+    an.add_argument('--debug', action='store_true', help='Show debug information')
     args = parser.parse_args()
 
     if args.cmd == 'analyze':
-        tech, social = run_analysis(args, args.verbose)
+        tech, social = run_analysis(args, args.verbose, args.debug)
         # Always save results to database
         tech_results_dict = {}
         social_results_dict = {}

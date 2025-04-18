@@ -82,8 +82,16 @@ class IndicatorRunner(IIndicatorRunner):
         self._logger.info(f"Running {indicator.name} for {symbol}")
         
         try:
-            # Calculate indicator
-            result = indicator.calculate(symbol)
+            # Fetch data from data provider
+            data = indicator._data_provider.get_data(symbol)
+            self._logger.debug(f"Fetched data for {symbol}: {data}")
+            
+            # Calculate indicator with data
+            result = indicator.calculate(symbol, data)
+            
+            # Log detailed results for debugging
+            self._logger.debug(f"Indicator {indicator.name} results for {symbol}:")
+            self._logger.debug(f"Raw result: {result}")
             
             # Extract execution time if available, otherwise calculate it
             execution_time = result.get('calculation_time_ms')
@@ -92,12 +100,13 @@ class IndicatorRunner(IIndicatorRunner):
             
             # Check for error
             if 'error' in result:
+                self._logger.error(f"Error in {indicator.name} for {symbol}: {result['error']}")
                 return IndicatorResult(
                     symbol=symbol,
                     indicator_name=indicator.name,
                     score=0.0,
                     max_score=indicator.max_score,
-                    details={},
+                    details=result.get('details', {}),
                     execution_time_ms=execution_time,
                     success=False,
                     error=result['error']

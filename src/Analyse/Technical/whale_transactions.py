@@ -5,6 +5,7 @@ Enhanced with advanced pattern detection and machine learning-inspired technique
 """
 import statistics
 import numpy as np
+import logging
 from typing import Dict, Any, List, Tuple, Optional
 from ..base_indicator import BaseIndicator
 from ..interfaces import IDataProvider
@@ -25,12 +26,14 @@ class WhaleTransactionsIndicator(BaseIndicator):
             data_provider: Data provider to use for fetching data
         """
         super().__init__("whale_transactions", 10.0, data_provider)
+        self._logger = logging.getLogger("whale_transactions")
         
         # Configuration parameters
-        self._volume_spike_threshold = 2.0  # Volume > 2x average is a spike
-        self._price_impact_threshold = 0.03  # 3% price change with spike is significant
+        self._volume_spike_threshold = 1.5  # Reduced from 2.0 to detect more spikes
+        self._price_impact_threshold = 0.02  # Reduced from 0.03 to be more sensitive
         self._accumulation_window = 5  # Days to look for accumulation patterns
         self._distribution_penalty = 0.5  # Penalty multiplier for distribution patterns
+        self._min_hours = 24  # Minimum hours of data needed for analysis
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -49,17 +52,41 @@ class WhaleTransactionsIndicator(BaseIndicator):
         prices = market_chart.get('prices', [])
         volumes = market_chart.get('total_volumes', [])
         
-        if not prices or len(prices) < 24 or not volumes or len(volumes) < 24:
+        # We need at least 24 hours of data for proper analysis
+        min_hours = 24
+        if not prices or len(prices) < min_hours or not volumes or len(volumes) < min_hours:
+            self._logger.error(f"Not enough historical data for {symbol}")
+            self._logger.error(f"Required: {min_hours} hours")
+            self._logger.error(f"Available: prices={len(prices)}, volumes={len(volumes)}")
             return {
                 'score': 0,
                 'details': {
                     'error': 'Not enough historical data',
-                    'required_data_points': 24,
+                    'required_data_points': min_hours,
                     'available_price_points': len(prices),
                     'available_volume_points': len(volumes),
-                    'note': 'This indicator requires at least 24 data points of price and volume history.'
+                    'note': f'This indicator requires at least {min_hours} hours of price and volume history.'
                 }
             }
+
+        self._logger.debug(f"\nWhale Transactions Analysis for {symbol}")
+        self._logger.debug(f"Raw data points: prices={len(prices)}, volumes={len(volumes)}")
+        
+        # Normalize data to ensure timestamps match
+        price_volume_data = self._normalize_price_volume_data(prices, volumes)
+        if not price_volume_data:
+            self._logger.error(f"Could not normalize price and volume data for {symbol}")
+            return {
+                'score': 0,
+                'details': {
+                    'error': 'Could not normalize price and volume data',
+                    'note': 'This indicator requires matching timestamps for price and volume data.'
+                }
+            }
+
+        self._logger.debug(f"Normalized data points: {len(price_volume_data)}")
+        self._logger.debug(f"First data point: {price_volume_data[0] if price_volume_data else 'None'}")
+        self._logger.debug(f"Last data point: {price_volume_data[-1] if price_volume_data else 'None'}")
         
         # Normalize data to ensure timestamps match
         price_volume_data = self._normalize_price_volume_data(prices, volumes)
@@ -92,19 +119,37 @@ class WhaleTransactionsIndicator(BaseIndicator):
         obv_trend = self._calculate_obv_trend(price_volume_data)
         
         # Calculate component scores
+        # Base score for having data
+        base_score = 1.0
+        
+        # Buy ratio score (0-5 points)
         buy_ratio_score = 5 * min(1, buy_ratio / 0.5) if buy_ratio >= 0.5 else 0
+        
+        # Sell-off score (0-5 points)
         sell_off_score = 5 * max(0, 1 - (max_consecutive_drops / 5))
         
-        # Apply accumulation bonus and distribution penalty
+        # Pattern score (0-3 points)
         pattern_adjustment = (accumulation_score - distribution_score * self._distribution_penalty)
         pattern_score = max(0, min(3, pattern_adjustment))
         
-        # Apply OBV trend adjustment
-        obv_adjustment = obv_trend * 2  # -2 to +2 range
+        # OBV trend adjustment (-2 to +2 points)
+        obv_adjustment = obv_trend * 2
         
         # Combine all factors into final score
-        final_score = buy_ratio_score + sell_off_score + pattern_score + obv_adjustment
+        final_score = base_score + buy_ratio_score + sell_off_score + pattern_score + obv_adjustment
         capped_score = min(max(0, final_score), self.max_score)
+        
+        # Debug logging
+        self._logger.debug(f"\nScoring Details for {symbol}")
+        self._logger.debug(f"Volume spikes: {len(volume_spikes)}")
+        self._logger.debug(f"Buy spikes: {buy_spikes}")
+        self._logger.debug(f"Sell spikes: {sell_spikes}")
+        self._logger.debug(f"Buy ratio: {buy_ratio:.2f}")
+        self._logger.debug(f"Consecutive drops: {max_consecutive_drops}")
+        self._logger.debug(f"Accumulation score: {accumulation_score:.2f}")
+        self._logger.debug(f"Distribution score: {distribution_score:.2f}")
+        self._logger.debug(f"OBV trend: {obv_trend:.2f}")
+        self._logger.debug(f"Final score: {capped_score:.2f}")
         
         return {
             'score': capped_score,

@@ -27,15 +27,16 @@ class IIndicator(ABC):
     """Interface for all indicators"""
     
     @abstractmethod
-    def calculate(self, symbol: str) -> Dict[str, Any]:
+    def calculate(self, symbol: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Calculate the indicator score for a given cryptocurrency
         
         Args:
-            symbol: Symbol of the cryptocurrency (e.g., 'BTC', 'ETH')
+            symbol: Symbol of the cryptocurrency
+            data: Data to use for calculation (optional)
             
         Returns:
-            Dictionary containing score and calculation details
+            Dictionary with calculation results
         """
         pass
     
