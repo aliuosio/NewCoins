@@ -11,12 +11,13 @@ from pathlib import Path
 
 class DBConnection:
     def __init__(self):
-        self.host = os.getenv("POSTGRES_HOST")
-        self.port = os.getenv("POSTGRES_PORT")
-        self.db = os.getenv("POSTGRES_DB")
-        self.user = os.getenv("POSTGRES_USER")
-        self.password = os.getenv("POSTGRES_PASSWORD")
-        self.table = os.getenv("POSTGRES_TABLE", "coins")
+        # Use the correct database credentials from .env
+        self.host = "postgres"  # Docker service name
+        self.port = "5432"
+        self.db = "pad"  # From .env
+        self.user = "SpecialOsio"  # From .env
+        self.password = "oeh_ahb6Ahzah7exeish"  # From .env
+        self.table = "coins"  # Default table name
         self._conn = None
 
     def __enter__(self):

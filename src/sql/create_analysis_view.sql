@@ -4,8 +4,8 @@
 -- Drop existing view if it exists
 DROP MATERIALIZED VIEW IF EXISTS analysis_summary;
 
--- Create materialized view
-CREATE MATERIALIZED VIEW analysis_summary AS
+-- Create regular view
+CREATE OR REPLACE VIEW analysis_summary AS
 SELECT 
     t.symbol,
     t.analysis_date,
@@ -127,17 +127,10 @@ SELECT
 FROM analyse_technical t
 LEFT JOIN analyse_social s ON t.symbol = s.symbol AND t.analysis_date = s.analysis_date
 
-WITH NO DATA;
+-- Regular views don't need WITH DATA
 
--- Create index for better query performance
-CREATE INDEX idx_analysis_summary_symbol_date ON analysis_summary(symbol, analysis_date);
+-- Note: Indexes are not needed for regular views as they are computed on-the-fly
 
--- Function to refresh the materialized view
-CREATE OR REPLACE FUNCTION refresh_analysis_summary()
-RETURNS void AS $$
-BEGIN
-    REFRESH MATERIALIZED VIEW analysis_summary;
-END;
-$$ LANGUAGE plpgsql;
+-- Regular views don't need refresh functions
 
 

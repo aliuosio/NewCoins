@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def create_analysis_view():
     """
-    Create the analysis_summary materialized view if it doesn't exist.
+    Create the analysis_summary view if it doesn't exist.
     """
     try:
         with DBConnection() as conn:
@@ -17,9 +17,9 @@ def create_analysis_view():
                 exists_query = """
                     SELECT EXISTS (
                         SELECT 1 
-                        FROM pg_matviews 
-                        WHERE schemaname = 'public' 
-                        AND matviewname = 'analysis_summary'
+                        FROM information_schema.views 
+                        WHERE table_schema = 'public' 
+                        AND table_name = 'analysis_summary'
                     )
                 """
                 
@@ -48,7 +48,8 @@ def refresh_analysis_view():
     """
     try:
         with DBConnection() as conn:
-            conn.execute(text("SELECT refresh_analysis_summary()"))
+            with conn.cursor() as cur:
+                cur.execute("REFRESH MATERIALIZED VIEW analysis_summary")
             logger.info("Analysis summary view refreshed successfully")
     except Exception as e:
         logger.error(f"Failed to refresh analysis summary view: {str(e)}")

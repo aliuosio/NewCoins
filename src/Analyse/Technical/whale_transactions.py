@@ -44,9 +44,10 @@ class WhaleTransactionsIndicator(BaseIndicator):
         Returns:
             Dictionary with calculation results
         """
-        # Extract price and volume data
-        prices = data.get('prices', [])
-        volumes = data.get('volumes', [])
+        # Extract price and volume data from market chart format
+        market_chart = data.get('market_chart', {})
+        prices = market_chart.get('prices', [])
+        volumes = market_chart.get('total_volumes', [])
         
         if not prices or len(prices) < 24 or not volumes or len(volumes) < 24:
             return {

@@ -454,29 +454,32 @@ class CoinGeckoProvider(BaseDataProvider):
                 self._logger.error(f"Fallback request also failed for {coin_id}: {str(fallback_error)}")
                 return {}
     
-    def _get_market_chart(self, coin_id: str, days: int = 30) -> Dict[str, List]:
+    def _get_market_chart(self, coin_id: str, days: int = 1) -> Dict[str, List]:
         """
         Get historical price and volume data
         
         Args:
             coin_id: CoinGecko coin ID
-            days: Number of days of data to retrieve
+            days: Number of days of data to retrieve (1 day for hourly data)
             
         Returns:
             Dictionary with price and volume history
         """
         try:
+            self._logger.info(f"Fetching market chart data for {coin_id} with params: {params}")
             params = {
                 'vs_currency': 'usd',
                 'days': days,
-                'interval': 'daily'
+                'interval': 'hourly'
             }
             
             response = self._make_api_request(
                 f"{self._base_url}/coins/{coin_id}/market_chart",
                 params=params
             )
-            return response.json()
+            data = response.json()
+            self._logger.info(f"Market chart data received for {coin_id}: prices={len(data.get('prices', []))}, volumes={len(data.get('total_volumes', []))}")
+            return data
         except Exception as e:
             self._logger.error(f"Error getting market chart for {coin_id}: {str(e)}")
             return {'prices': [], 'total_volumes': []}
