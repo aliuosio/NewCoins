@@ -62,10 +62,6 @@ def create_tables():
     
     with DBConnection() as conn:
         with conn.cursor() as cur:
-            # Create coins table
-            cur.execute(drop_query)
-            cur.execute(create_query)
-            
             # Create technical analysis table
             cur.execute(technical_drop_query)
             cur.execute(technical_create_query)
@@ -73,6 +69,15 @@ def create_tables():
             # Create social analysis table
             cur.execute(social_drop_query)
             cur.execute(social_create_query)
+            
+            # Create or update the analysis_summary view (after indicator tables, before coins table)
+            analysis_view_sql_path = Path(__file__).parent.parent / "sql" / "create_analysis_view.sql"
+            with open(analysis_view_sql_path) as f:
+                analysis_view_query = f.read()
+            cur.execute(analysis_view_query)
+            
+            # Create coins table
+            cur.execute(drop_query)
             cur.execute(create_query)
         conn.commit()
 

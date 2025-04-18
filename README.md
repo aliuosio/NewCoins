@@ -68,6 +68,49 @@ Useful for traders interested in newly listed tokens, which often have higher vo
 python main.py analyze BTC --verbose
 ```
 
+### Using the Scheduler Tool
+
+The Scheduler automates the process of:
+1. Fetching new coins from MEXC (using the NewCoins module)
+2. Analyzing those coins with the Analyzer
+3. Checking the analysis summary view for coins with a strong recommendation
+4. Printing (or creating) cronjobs for a fictive trading script for qualifying coins
+
+#### Run the Scheduler (default: last 24h)
+
+```bash
+python Scheduler/main.py
+```
+
+- This will fetch and persist new coins, analyze them, and print out cronjob lines for coins with a "BUY" or "STRONG BUY" recommendation.
+- By default, it considers coins added in the last 24 hours (adjustable in the code).
+
+#### Example Output
+```
+[Scheduler] Fetching new coins...
+[Scheduler] Found new coins: ['COIN1', 'COIN2']
+[Scheduler] Analyzing: COIN1,COIN2
+[Scheduler] Qualified coins for trading: ['COIN1']
+[Scheduler] Would add cronjob: * * * * * /usr/bin/python /src/Trade/fictive_trade.py COIN1
+```
+
+You can later adapt the cronjob step to actually write to your system crontab or use a real trading script.
+
+
+# Basic usage - analyze Bitcoin (includes both technical and social indicators)
+   
+      python main.py analyze BTC
+
+# Analyze multiple cryptocurrencies
+
+      python main.py analyze BTC,ETH,SOL,DOGE
+
+#### Analyze with verbose output
+
+```bash
+python main.py analyze BTC --verbose
+```
+
 ### Using the NewCoins Tool
 
 The NewCoins module fetches information about newly listed cryptocurrencies from the MEXC exchange API. This helps you discover and analyze new coins as soon as they're listed.
@@ -104,19 +147,19 @@ You can later adapt the cronjob step to actually write to your system crontab or
 #### Fetch coins scheduled to be listed in the next 24 hours (default)
 
 ```bash
-python src/NewCoins/main.py
+python NewCoins/main.py
 ```
 
 #### Fetch coins scheduled to be listed in the next X hours
 
 ```bash
-python src/NewCoins/main.py 48  # For next 48 hours
+python NewCoins/main.py 48  # For next 48 hours
 ```
 
 #### Fetch coins that were listed in the past X hours
 
 ```bash
-python src/NewCoins/main.py -24  # For past 24 hours
+python NewCoins/main.py -24  # For past 24 hours
 ```
 
 The fetched coins are automatically saved to the database for later analysis.
