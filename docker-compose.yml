@@ -1,16 +1,16 @@
 services:
        
   python:
-    #build:
-    #  context: ./.docker/python
-    #  args:
-    #    PY_VERSION: ${PY_VERSION}
+    build:
+      context: ./.docker/python
+      args:
+        PY_VERSION: ${PY_VERSION}
     container_name: ${NAMESPACE}_python
     image: osioaliu/python:${PY_VERSION}
     tty: true
     init: true
     depends_on:
-      - postgres
+     - postgres
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
@@ -24,7 +24,7 @@ services:
       "
     volumes:
       - ./src:/src
-
+    
   postgres:
     container_name: ${NAMESPACE}_postgres
     image: postgres:${POSTGRES_VERSION}
