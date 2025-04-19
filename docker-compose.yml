@@ -2,11 +2,11 @@ services:
 
   webapp-frontend:
     container_name: ${NAMESPACE}_webapp_frontend
-    image: osioaliu/pump-and-dump-frontend
-    pull_policy: always
-    #build:
-    #  context: ./webapp/frontend
-    #  dockerfile: ../../.docker/node/Dockerfile
+    # image: osioaliu/pump-and-dump-frontend
+    # pull_policy: always
+    build:
+      context: ./webapp/frontend
+      dockerfile: ../../.docker/node/Dockerfile
     working_dir: /app
     volumes:
       - ./webapp/frontend:/app
@@ -17,7 +17,7 @@ services:
       - .env
     depends_on:
       - webapp-backend
-    command: "npm run dev"
+    command: sh -c "npm install && npm run dev"
 
   webapp-backend:
     container_name: ${NAMESPACE}_webapp_backend
