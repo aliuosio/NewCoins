@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import parser from 'cron-parser';
+import { DateTime } from 'luxon';
 
 export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
   const [selectedToken, setSelectedToken] = useState('BTC');
   const [showCronjobs, setShowCronjobs] = useState(false);
+  const [cronjobs, setCronjobs] = useState<any[]>([]);
+  const [cronLoading, setCronLoading] = useState(false);
+
   const [loading, setLoading] = useState(false);
   // Correct order and labels for technical and social indicators
   const TECHNICAL_LABELS = [
@@ -86,6 +91,18 @@ export default function Home() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [selectedToken]);
+
+  // Fetch cronjobs when modal is opened
+  useEffect(() => {
+    if (showCronjobs) {
+      setCronLoading(true);
+      fetch('/api/cronjobs')
+        .then(res => res.json())
+        .then(data => setCronjobs(data))
+        .catch(() => setCronjobs([]))
+        .finally(() => setCronLoading(false));
+    }
+  }, [showCronjobs]);
 
   return (
     <>
@@ -203,7 +220,7 @@ export default function Home() {
         {/* Modal Overlay */}
         {showCronjobs && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
-            <div className="bg-[#232323] rounded-2xl shadow-xl p-6 w-full max-w-md relative animate-fade-in">
+            <div className="bg-[#232323] rounded-2xl shadow-xl p-6 w-full max-w-2xl relative animate-fade-in">
               <button
                 className="absolute top-3 right-4 text-[#FF6A00] text-2xl font-bold hover:text-[#FFA64D] focus:outline-none"
                 onClick={() => setShowCronjobs(false)}
@@ -213,20 +230,30 @@ export default function Home() {
               </button>
               <h2 className="text-[#FF6A00] text-xl font-bold mb-4">Cronjobs</h2>
               <div className="text-[#FFDEB4] text-sm">
-                <ul className="space-y-2">
-                  <li className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
-                    <span>Update Prices</span>
-                    <span className="text-[#2DE282] font-semibold">Every 5 min</span>
-                  </li>
-                  <li className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
-                    <span>Fetch Social Data</span>
-                    <span className="text-[#2DE282] font-semibold">Hourly</span>
-                  </li>
-                  <li className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
-                    <span>Analyze Whale Tx</span>
-                    <span className="text-[#2DE282] font-semibold">Daily</span>
-                  </li>
-                </ul>
+                {cronLoading ? (
+                  <div className="py-4 text-center">Loading...</div>
+                ) : cronjobs.length === 0 ? (
+                  <div className="py-4 text-center">No cronjobs found.</div>
+                ) : (
+                  <ul className="space-y-2">
+                    {cronjobs.map(job => (
+                      <li key={job.id} className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
+                        <span className="text-[#2DE282] font-semibold w-1/3 truncate">
+                          {(() => {
+                            try {
+                              const interval = parser.parseExpression(job.schedule, { tz: 'Europe/Paris' });
+                              const next = interval.next();
+                              return DateTime.fromJSDate(next, { zone: 'Europe/Paris' }).toFormat('dd.MM.yyyy HH:mm') + ' CET';
+                            } catch {
+                              return job.schedule;
+                            }
+                          })()}
+                        </span>
+                        <span className="text-white break-all w-2/3 text-center">{job.command}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           </div>
