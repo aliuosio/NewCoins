@@ -43,19 +43,20 @@ class PostgresCoinRepository:
 
     def get_new_symbols_with_time(self) -> List[tuple]:
         """
-        Returns a list of (symbol, time_start) tuples for new coins in the last 24 hours.
+        Returns a list of (symbol, time_start) tuples for new coins scheduled to launch in the next 24 hours.
         """
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
-        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        now = datetime.now(timezone.utc)
+        next_24h = now + timedelta(hours=24)
         cur.execute(
-            f"SELECT symbol, time_start FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s",
-            (since,)
+            f"SELECT symbol, time_start FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s AND time_start <= %s",
+            (now, next_24h)
         )
         coins = [(row[0], row[1]) for row in cur.fetchall()]
         cur.close()
         conn.close()
-        print(f"[Scheduler] Found new coins with times: {coins}")
+        print(f"[Scheduler] Found new coins with times (next 24h): {coins}")
         return coins
 
 
