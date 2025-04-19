@@ -131,7 +131,7 @@ export default function Home() {
             </div>
             <div className="flex flex-col w-full mt-2 sm:mt-0">
   <div className="flex flex-col w-full">
-  <span className="text-2xl sm:text-3xl lg:text-5xl font-bold text-right w-full text-[#2DE282] sm:mb-0 mb-1">{Math.round(totalScore)}%</span>
+  <span className="text-2xl sm:text-3xl lg:text-5xl font-bold text-center sm:text-right w-full text-[#2DE282] sm:mb-0 -mb-1">{Math.round(totalScore)}%</span>
   <div className="text-[#00FFB2] text-xs sm:text-sm lg:text-base text-right w-full sm:w-auto">{recommendationDesc}</div>
 </div>
 </div>
@@ -142,8 +142,8 @@ export default function Home() {
             {/* Technical Indicators */}
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2 mt-6">
-                <span className="uppercase font-bold text-xs sm:text-sm lg:text-base px-2 sm:px-3">Technical Indicators</span>
-                <span className="font-bold text-[#2DE282] text-xs sm:text-sm lg:text-base text-right px-2 sm:px-3">Score: {(() => {
+                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Technical Indicators</span>
+                <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
                   const score = technicalIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
                   const max = technicalIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
                   return max > 0 ? `${score}/${max} pts` : '0 pts';
@@ -164,12 +164,12 @@ export default function Home() {
                             {indicator.name === 'Token Distribution' && <span>📈</span>}
                             {indicator.name === 'Pre-Sale Vesting' && <span>📆</span>}
                             {indicator.name === 'Smart Contract Audit' && <span>📝</span>}
-                            <span className="text-white font-bold">{indicator.name}</span>
+                            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
                           </span>
                           <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
                             <div className="flex items-center gap-2 w-full">
                               <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
+                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
                                   {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
                                   <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
                                 </span>
@@ -186,8 +186,8 @@ export default function Home() {
             {/* Social Indicators */}
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2 mt-4 sm:mt-6 lg:mt-10">
-                <span className="uppercase font-bold text-xs sm:text-sm lg:text-base px-2 sm:px-3">Social Indicators</span>
-                <span className="font-bold text-[#2DE282] text-xs sm:text-sm lg:text-base text-right px-2 sm:px-3">Score: {(() => {
+                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Social Indicators</span>
+                <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
                   const score = socialIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
                   const max = socialIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
                   return max > 0 ? `${score}/${max} pts` : '0 pts';
@@ -205,12 +205,12 @@ export default function Home() {
                             {indicator.name === 'Social Volume' && <span>👥</span>}
                             {indicator.name === 'Sentiment Analysis' && <span>😊</span>}
                             {indicator.name === 'Developer Activity' && <span>📈</span>}
-                            <span className="text-white font-bold">{indicator.name}</span>
+                            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
                           </span>
                           <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
                             <div className="flex items-center gap-2 w-full">
                               <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
+                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
                                   {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
                                   <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
                                 </span>
@@ -301,7 +301,7 @@ export default function Home() {
                             }
                           })()}
                         </span>
-                        <span className="text-white break-all w-2/3 text-center">{job.command}</span>
+                        <span className="text-[#FF6A00] break-all w-2/3 text-center">{job.command}</span>
                       </li>
                     ))}
                   </ul>
