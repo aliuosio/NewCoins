@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, Any
 from utils.mexc_api_factory import MEXCApiFactory
+from utils.db import Database
 from .interfaces import TradingClient
 
 class MEXCTradingClient(TradingClient):

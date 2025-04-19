@@ -1,7 +1,7 @@
 import sys
 import logging
 from typing import Any
-from utils.database import Database
+from utils.db import Database
 from .implementations import MEXCTradingClient
 
 def main():
