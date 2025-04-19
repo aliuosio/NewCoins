@@ -10,7 +10,7 @@ A tool for automated cryptocurrency analysis using technical and social indicato
    ```bash
    docker compose up -d
    ```
-4. Enter the Python container shell to run analysis commands:
+4. Enter the Python container shell to run commands:
    ```bash
    docker compose exec python bash
    ```
@@ -35,8 +35,6 @@ python main.py analyze BTC --verbose
 ```bash
 python -m Scheduler.main
 ```
-
-Fetched coins are saved to the database for later analysis.
 
 ## Features & Indicators
 
