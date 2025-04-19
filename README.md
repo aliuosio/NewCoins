@@ -3,46 +3,38 @@
 A tool for automated cryptocurrency analysis using technical and social indicators, with recommendations and database storage.
 
 ## Setup
-1. Clone the repo and configure `.env`
-2. Build and start containers:
+
+1. Make sure you have Docker and Docker Compose installed.
+2. Clone this repository and configure your environment variables in the `.env` file.
+3. Build and start the containers:
    ```bash
-- Updates existing records when new analyses are performed
-- Supports historical data tracking and comparison
+   docker compose up -d
+   ```
+4. Enter the Python container shell to run analysis commands:
+   ```bash
+   docker compose exec python bash
+   ```
 
 ## Usage
 
-### Setup
+### Analyze coins (single or multiple):
 
-1. Make sure you have Docker and Docker Compose installed
-2. Clone this repository
-3. Configure your environment variables in `.env` file
-4. Build and start the containers:
-
-   docker-compose up -d
-
-use `docker compose python bash` # to run below commands
-# Basic usage - analyze Bitcoin (includes both technical and social indicators)
-
-      
-   
-      python main.py analyze BTC
-
-# Analyze multiple cryptocurrencies
-
-Analyze coins (single or multiple):
 ```bash
 python main.py analyze BTC
 python main.py analyze BTC,ETH,SOL
 ```
 
-Verbose analysis:
+### Verbose analysis:
+
 ```bash
 python main.py analyze BTC --verbose
 ```
 
-Run the Scheduler:
+### Run the Scheduler:
+
 ```bash
 python -m Scheduler.main
+```
 
 Fetched coins are saved to the database for later analysis.
 
