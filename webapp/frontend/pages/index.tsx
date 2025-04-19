@@ -236,15 +236,58 @@ export default function Home() {
                   <div className="py-4 text-center">No cronjobs found.</div>
                 ) : (
                   <ul className="space-y-2">
-                    {cronjobs.map(job => (
+                    {[...cronjobs]
+                      .map(job => {
+                        // Attach a sortable date property
+                        try {
+                          const parts = job.schedule.split(' ');
+                          if (parts.length < 5) throw new Error('Invalid cron format');
+                          const [min, hour, day, month] = parts;
+                          const date = new Date(Date.UTC(
+                            new Date().getFullYear(),
+                            parseInt(month) - 1,
+                            parseInt(day),
+                            parseInt(hour),
+                            parseInt(min)
+                          ));
+                          return { ...job, _sortDate: date };
+                        } catch {
+                          return { ...job, _sortDate: null };
+                        }
+                      })
+                      .sort((a, b) => {
+                        if (a._sortDate && b._sortDate) return a._sortDate - b._sortDate;
+                        if (a._sortDate) return -1;
+                        if (b._sortDate) return 1;
+                        return 0;
+                      })
+                      .map(job => (
                       <li key={job.id} className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
                         <span className="text-[#2DE282] font-semibold w-1/3 truncate">
                           {(() => {
+                            // Custom cron to CET/CEST converter
                             try {
-                              const interval = parser.parseExpression(job.schedule, { tz: 'Europe/Paris' });
-                              const next = interval.next();
-                              return DateTime.fromJSDate(next, { zone: 'Europe/Paris' }).toFormat('dd.MM.yyyy HH:mm') + ' CET';
-                            } catch {
+                              const parts = job.schedule.split(' ');
+                              if (parts.length < 5) throw new Error('Invalid cron format');
+                              const [min, hour, day, month] = parts;
+                              const utcDate = new Date(Date.UTC(
+                                new Date().getFullYear(), // Use current year
+                                parseInt(month) - 1,
+                                parseInt(day),
+                                parseInt(hour),
+                                parseInt(min)
+                              ));
+                              const formatter = new Intl.DateTimeFormat('de-DE', {
+                                timeZone: 'Europe/Berlin',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false,
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              });
+                              return formatter.format(utcDate) + ' CET';
+                            } catch (e) {
                               return job.schedule;
                             }
                           })()}
