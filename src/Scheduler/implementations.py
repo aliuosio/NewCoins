@@ -41,6 +41,24 @@ class PostgresCoinRepository:
         print(f"[Scheduler] Found new coins: {coins}")
         return coins
 
+    def get_new_symbols_with_time(self) -> List[tuple]:
+        """
+        Returns a list of (symbol, time_start) tuples for new coins in the last 24 hours.
+        """
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        since = datetime.now(timezone.utc) - timedelta(hours=24)
+        cur.execute(
+            f"SELECT symbol, time_start FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s",
+            (since,)
+        )
+        coins = [(row[0], row[1]) for row in cur.fetchall()]
+        cur.close()
+        conn.close()
+        print(f"[Scheduler] Found new coins with times: {coins}")
+        return coins
+
+
 class DefaultCoinAnalyzer:
     def analyze(self, symbols: List[str]) -> None:
         if not symbols:
@@ -70,8 +88,8 @@ class PostgresRecommendationService:
 import subprocess
 
 class PrintCronJobManager:
-    def create_jobs(self, symbols: List[str]) -> None:
-        if not symbols:
+    def create_jobs(self, symbol_times: list) -> None:
+        if not symbol_times:
             print("[Scheduler] No coins qualified for trading.")
             return
         # Get current crontab
@@ -83,13 +101,38 @@ class PrintCronJobManager:
             current_crontab = ''
 
         new_jobs = []
-        for symbol in symbols:
-            buy_job = f"* * * * * /usr/bin/python -m Trade.main buy {symbol}"
-            sell_job = f"* * * * * /usr/bin/python -m Trade.main sell {symbol}"
+        import os
+        from datetime import timedelta
+        for symbol, time_start in symbol_times:
+            # Convert time_start (datetime) to cron format
+            if isinstance(time_start, str):
+                from dateutil import parser
+                dt = parser.parse(time_start)
+            else:
+                dt = time_start
+            minute = dt.minute
+            hour = dt.hour
+            day = dt.day
+            month = dt.month
+            # Weekday is optional, use '*'
+            cron_time = f"{minute} {hour} {day} {month} *"
+            buy_job = f"{cron_time} /usr/bin/python -m Trade.main buy {symbol}"
+
+            # Get SELL_AFTER_MIN from env, default 10
+            sell_after_min = int(os.getenv('SELL_AFTER_MIN', 10))
+            sell_dt = dt + timedelta(minutes=sell_after_min)
+            sell_minute = sell_dt.minute
+            sell_hour = sell_dt.hour
+            sell_day = sell_dt.day
+            sell_month = sell_dt.month
+            sell_cron_time = f"{sell_minute} {sell_hour} {sell_day} {sell_month} *"
+            sell_job = f"{sell_cron_time} /usr/bin/python -m Trade.main sell {symbol}"
+
             if buy_job not in current_crontab:
                 new_jobs.append(buy_job)
             if sell_job not in current_crontab:
                 new_jobs.append(sell_job)
+
 
         if new_jobs:
             # Combine existing crontab with new jobs
@@ -102,4 +145,7 @@ class PrintCronJobManager:
                 print(f"[Scheduler] Failed to update crontab: {e}")
         else:
             print("[Scheduler] All relevant cronjobs already exist.")
+
+# Note: You must install python-dateutil for date parsing if not already present.
+
 
