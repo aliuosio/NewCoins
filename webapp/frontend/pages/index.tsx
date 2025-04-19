@@ -1,8 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Home() {
   const [selectedToken, setSelectedToken] = useState('BTC');
   const [showCronjobs, setShowCronjobs] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [technicalIndicators, setTechnicalIndicators] = useState([
+    { name: 'Trading Volume', value: 90 },
+    { name: 'Liquidity', value: 85 },
+    { name: 'Whale Transactions', value: 70 },
+    { name: 'Token Distribution', value: 40 },
+    { name: 'Pre-Sale Vesting', value: 50 },
+    { name: 'Smart Contract Audit', value: 30 },
+  ]);
+  const [socialIndicators, setSocialIndicators] = useState([
+    { name: 'Social Volume', value: 75 },
+    { name: 'Sentiment Analysis', value: 65 },
+    { name: 'Developer Activity', value: 45 },
+  ]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/indicators?token=${selectedToken}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.technical) setTechnicalIndicators(data.technical);
+        if (data.social) setSocialIndicators(data.social);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [selectedToken]);
 
   return (
     <>
@@ -32,60 +58,29 @@ export default function Home() {
           <div className="uppercase font-bold text-xs sm:text-sm lg:text-base mb-2 mt-6">Technical Indicators</div>
           <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-6">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-1 sm:gap-2 lg:gap-4"><span>📈</span>Trading Volume</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '90%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>90%</span>
+              {loading ? (
+                <div className="text-center text-[#FF6A00] py-4">Loading...</div>
+              ) : (
+                technicalIndicators.map((indicator, idx) => (
+                  <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
+                    <span className="flex items-center gap-2">
+                      {indicator.name === 'Trading Volume' && <span>📈</span>}
+                      {indicator.name === 'Liquidity' && <span>💼</span>}
+                      {indicator.name === 'Whale Transactions' && <span>🔁</span>}
+                      {indicator.name === 'Token Distribution' && <span>📊</span>}
+                      {indicator.name === 'Pre-Sale Vesting' && <span>🛡️</span>}
+                      {indicator.name === 'Smart Contract Audit' && <span>📝</span>}
+                      {indicator.name}
+                    </span>
+                    <div className="w-1/2 progress-track ml-4">
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: `${indicator.value}%` }}></div>
+                        <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>{indicator.value}%</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>💼</span>Liquidity</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '85%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>85%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>🔁</span>Whale Transactions</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '70%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>70%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>📊</span>Token Distribution</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '40%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>40%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>🛡️</span>Pre-Sale Vesting</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '50%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>50%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>📝</span>Smart Contract Audit</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '30%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>30%</span>
-                  </div>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -93,33 +88,26 @@ export default function Home() {
           <div className="uppercase font-bold text-xs sm:text-sm lg:text-base mb-2 mt-4 sm:mt-6 lg:mt-10">Social Indicators</div>
           <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>👥</span>Social Volume</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '75%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>75%</span>
+              {loading ? (
+                <div className="text-center text-[#FF6A00] py-4">Loading...</div>
+              ) : (
+                socialIndicators.map((indicator, idx) => (
+                  <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
+                    <span className="flex items-center gap-2">
+                      {indicator.name === 'Social Volume' && <span>👥</span>}
+                      {indicator.name === 'Sentiment Analysis' && <span>😊</span>}
+                      {indicator.name === 'Developer Activity' && <span>📈</span>}
+                      {indicator.name}
+                    </span>
+                    <div className="w-1/2 progress-track ml-4">
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: `${indicator.value}%` }}></div>
+                        <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>{indicator.value}%</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>😊</span>Sentiment Analysis</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '65%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>65%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                <span className="flex items-center gap-2"><span>📈</span>Developer Activity</span>
-                <div className="w-1/2 progress-track ml-4">
-                  <div className="flex items-center gap-2 w-full">
-                    <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: '45%' }}></div>
-                    <span className="bg-[#FF6A00] text-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-bold shadow-[0_0_10px_#FF6A00] text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>45%</span>
-                  </div>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </div>
           {/* Recommendation */}
