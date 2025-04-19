@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #121212;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #FF6A00;
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  .glow-button {
+    box-shadow: 0 0 10px rgba(45, 226, 130, 0.5), 0 0 20px rgba(45, 226, 130, 0.3);
+  }
+  .progress-bar {
+    @apply h-2 rounded bg-[#FF6A00];
+  }
+  .progress-track {
+    @apply h-2 rounded bg-[#2D2D2D];
+  }
+}

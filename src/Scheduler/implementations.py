@@ -104,6 +104,9 @@ class PrintCronJobManager:
         new_jobs = []
         import os
         from datetime import timedelta
+        import sys, os
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+        from src.utils.cron_db import save_cronjob
         for symbol, time_start in symbol_times:
             # Convert time_start (datetime) to cron format
             if isinstance(time_start, str):
@@ -131,9 +134,10 @@ class PrintCronJobManager:
 
             if buy_job not in current_crontab:
                 new_jobs.append(buy_job)
+                save_cronjob(cron_time, f"/usr/bin/python -m Trade.main buy {symbol}")
             if sell_job not in current_crontab:
                 new_jobs.append(sell_job)
-
+                save_cronjob(sell_cron_time, f"/usr/bin/python -m Trade.main sell {symbol}")
 
         if new_jobs:
             # Combine existing crontab with new jobs

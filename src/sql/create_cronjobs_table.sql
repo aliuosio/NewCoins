@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS cronjobs (
+    id SERIAL PRIMARY KEY,
+    schedule TEXT NOT NULL,
+    command TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
