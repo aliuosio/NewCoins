@@ -20,9 +20,10 @@ A tool for automated cryptocurrency analysis using technical and social indicato
 
    docker-compose up -d
 
-### Using the Analyzer Tool
-
+use `docker compose python bash` # to run below commands
 # Basic usage - analyze Bitcoin (includes both technical and social indicators)
+
+      
    
       python main.py analyze BTC
 
@@ -41,7 +42,7 @@ python main.py analyze BTC --verbose
 
 Run the Scheduler:
 ```bash
-python Scheduler/main.py
+python -m Scheduler.main
 ```
 
 This fetches, analyzes, and prints cronjob lines for coins with a "BUY" or "STRONG BUY" recommendation (default: last 24h).

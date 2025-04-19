@@ -5,6 +5,13 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 from .interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
 
+# Load environment variables from .env automatically
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # If dotenv is not installed, skip (but recommend installing for local dev)
+
 DB_CONFIG = {
     'dbname': os.getenv('POSTGRES_DB', 'pad'),
     'user': os.getenv('POSTGRES_USER', 'SpecialOsio'),
@@ -45,13 +52,19 @@ class DefaultCoinAnalyzer:
 
 class PostgresRecommendationService:
     def get_qualified(self) -> List[str]:
+        # Always fetch the latest threshold from the environment
+        threshold_env = os.getenv('SCORE_THRESHOLD')
+        try:
+            threshold = float(threshold_env) if threshold_env is not None else 70.0
+        except ValueError:
+            threshold = 70.0
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
-        cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE recommendation LIKE 'BUY%' OR recommendation LIKE 'STRONG BUY%'")
+        cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE total_score >= %s", (threshold,))
         coins = [row[0] for row in cur.fetchall()]
         cur.close()
         conn.close()
-        print(f"[Scheduler] Qualified coins for trading: {coins}")
+        print(f"[Scheduler] Qualified coins for trading (score >= {threshold}): {coins}")
         return coins
 
 class PrintCronJobManager:
