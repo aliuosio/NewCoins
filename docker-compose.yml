@@ -34,7 +34,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - init-db
+      - postgres
     command: "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
   python:
@@ -79,20 +79,6 @@ services:
       interval: 5s
       retries: 5
       start_period: 10s
-
-  init-db:
-    image: postgres:${POSTGRES_VERSION}
-    container_name: ${NAMESPACE}_init_db
-    depends_on:
-      - postgres
-    env_file:
-      - .env
-    volumes:
-      - ./src/sql:/docker-entrypoint-initdb.d
-    entrypoint: ["/bin/bash", "-c", "sleep 5 && psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/init_all.sql"]
-    restart: "on-failure"
-    networks:
-      - default
 
 volumes:
   pg_data:
