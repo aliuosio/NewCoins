@@ -1,5 +1,6 @@
 import sys
 import logging
+import os
 from typing import Any
 from utils.db import DBConnection
 from Trade.implementations import MEXCTradingClient
@@ -65,7 +66,9 @@ def main():
 
         action = sys.argv[1].lower()
         symbol = sys.argv[2].upper()
-        asset = symbol
+        if not symbol.endswith('USDT'):
+            symbol = symbol + 'USDT'
+        asset = symbol.replace('USDT', '')
 
         if action not in ["buy", "sell"]:
             print("Invalid action. Use 'buy' or 'sell'.")

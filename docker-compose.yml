@@ -1,10 +1,10 @@
 services:
        
   python:
-    build:
-      context: ./.docker/python
-      args:
-        PY_VERSION: ${PY_VERSION}
+    #build:
+     # context: ./.docker/python
+     # args:
+     #   PY_VERSION: ${PY_VERSION}
     container_name: ${NAMESPACE}_python
     image: osioaliu/python:${PY_VERSION}
     tty: true
