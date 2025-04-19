@@ -272,7 +272,7 @@ export default function Home() {
                       })
                       .map(job => (
                       <li key={job.id} className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
-                        <span className="text-[#2DE282] font-semibold w-1/3 truncate">
+                        <span className="text-[#2DE282] font-semibold w-1/3 text-base sm:text-lg">
                           {(() => {
                             // Custom cron to CET/CEST converter
                             try {
@@ -301,7 +301,7 @@ export default function Home() {
                             }
                           })()}
                         </span>
-                        <span className="text-[#FF6A00] break-all w-2/3 text-center">{job.command}</span>
+                        <span className="text-white break-all w-2/3 text-center text-base sm:text-lg">{job.command.replace('/usr/bin/python -m', '').replace('Trade.main', '').trim()}</span>
                       </li>
                     ))}
                   </ul>
