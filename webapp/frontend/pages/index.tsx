@@ -198,7 +198,17 @@ export default function Home() {
               )}
             </div>
           </div>
-
+          {/* Recommendation */}
+          <div className="flex flex-col items-center mt-4 sm:mt-6 lg:mt-10 mb-2">
+            <span className="uppercase font-bold text-xs sm:text-sm lg:text-base mb-1">Recommendation</span>
+            <span className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[#FF6A00] mb-2">{Math.round(totalScore)}%</span>
+            <div className="flex items-center gap-3">
+              <div className={`font-bold text-xs sm:text-sm lg:text-lg px-3 py-2 sm:px-4 lg:px-8 lg:py-3 rounded-lg glow-button flex items-center h-full ${recommendation === 'STRONG BUY' ? 'bg-[#2DE282] text-black' : recommendation === 'BUY' ? 'bg-[#FFDEB4] text-black' : recommendation === 'HOLD' ? 'bg-[#FFB800] text-black' : recommendation === 'WATCH' ? 'bg-[#FFA64D] text-black' : 'bg-[#FF6A00] text-white'}`}>
+                {recommendation}
+              </div>
+            </div>
+          </div>
+          <div className="text-[#00FFB2] text-xs sm:text-sm lg:text-base mt-2">{recommendationDesc}</div>
         </div>
         {/* Modal Overlay */}
         {showCronjobs && (
