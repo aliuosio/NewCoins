@@ -26,21 +26,37 @@ class MEXCTradingClient(TradingClient):
     def place_order(self, action: str, symbol: str, asset: str) -> Dict[str, Any]:
         try:
             side = "BUY" if action == "buy" else "SELL"
-            price = 1.0  # Placeholder, replace with actual price
+            # Fetch the current market price using the tickerPrice endpoint
+            ticker_data = self.client.tickerPrice(symbol)
+            if isinstance(ticker_data, dict):
+                price = float(ticker_data.get("price"))
+            elif isinstance(ticker_data, list):
+                # If the response is a list, find the symbol
+                price = None
+                for entry in ticker_data:
+                    if entry.get("symbol") == symbol:
+                        price = float(entry.get("price"))
+                        break
+                if price is None:
+                    raise ValueError(f"Price for symbol {symbol} not found in tickerPrice response.")
+            else:
+                raise ValueError("Unexpected response type from tickerPrice.")
+
             if side == "BUY":
                 balance = self.get_balance("USDT")
                 if balance <= 0:
                     raise ValueError("Insufficient USDT balance")
-                quantity = balance / price
+                # Use all available USDT by specifying quoteOrderQty
+                order_params = {
+                    "quoteOrderQty": balance
+                }
             else:
                 balance = self.get_balance(asset)
                 if balance <= 0:
                     raise ValueError(f"Insufficient {asset} balance")
-                quantity = balance
-            order_params = {
-                "quantity": quantity,
-                "price": price
-            }
+                order_params = {
+                    "quantity": balance
+                }
             response = self.client.place_order(symbol, side, "MARKET", **order_params)
             self.logger.info(f"Order placed: {response}")
             return response

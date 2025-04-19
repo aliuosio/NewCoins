@@ -1,8 +1,56 @@
 import sys
 import logging
 from typing import Any
-from utils.db import Database
-from .implementations import MEXCTradingClient
+from utils.db import DBConnection
+from Trade.implementations import MEXCTradingClient
+from datetime import datetime
+
+class OrderRepository:
+    def __init__(self):
+        self.table = os.getenv('POSTGRES_TABLE', 'coins')
+
+    def save_order(self, symbol, action, pre_balance, post_balance, order_response):
+        now = datetime.utcnow()
+        name = symbol  # You can enhance this if you have full names elsewhere
+        price = None
+        fund = None
+        time_buy = None
+        time_sell = None
+        price_buy = None
+        price_sell = None
+        fund_buy = None
+        fund_sell = None
+        profit = None
+        if action == 'buy':
+            price = float(order_response.get('price', 0))
+            fund = float(order_response.get('cummulativeQuoteQty', 0))
+            time_buy = now
+            price_buy = price
+            fund_buy = fund
+        elif action == 'sell':
+            price = float(order_response.get('price', 0))
+            fund = float(order_response.get('cummulativeQuoteQty', 0))
+            time_sell = now
+            price_sell = price
+            fund_sell = fund
+            # Optionally calculate profit if you can fetch fund_buy
+        with DBConnection() as conn:
+            with conn.cursor() as cur:
+                insert_query = f"""
+                INSERT INTO {self.table} (name, symbol, time_start, time_buy, time_sell, price_buy, price_sell, fund_buy, fund_sell, profit)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (symbol) DO UPDATE SET
+                    time_buy = EXCLUDED.time_buy,
+                    time_sell = EXCLUDED.time_sell,
+                    price_buy = EXCLUDED.price_buy,
+                    price_sell = EXCLUDED.price_sell,
+                    fund_buy = EXCLUDED.fund_buy,
+                    fund_sell = EXCLUDED.fund_sell,
+                    profit = EXCLUDED.profit
+                """
+                cur.execute(insert_query, (
+                    name, symbol, now, time_buy, time_sell, price_buy, price_sell, fund_buy, fund_sell, profit
+                ))
 
 def main():
     """
@@ -23,7 +71,7 @@ def main():
             print("Invalid action. Use 'buy' or 'sell'.")
             sys.exit(1)
 
-        db = Database()
+        order_repo = OrderRepository()
         trading_client = MEXCTradingClient()
 
         # Get pre-order balance
@@ -36,7 +84,7 @@ def main():
         post_order_balance = trading_client.get_balance("USDT" if action == "buy" else asset)
 
         # Save order details
-        db.save_order(
+        order_repo.save_order(
             symbol=symbol,
             action=action,
             pre_balance=pre_order_balance,
