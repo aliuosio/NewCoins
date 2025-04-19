@@ -4,7 +4,7 @@ FROM python:${PY_VERSION:-3.13.3-slim-bookworm}
 LABEL maintainer="Osiozekhai Aliu"
 
 RUN apt update && apt upgrade -y && \
-    apt install -y cron postgresql-client nano && \
+    apt install -y cron postgresql-client nano nodejs npm && \
     apt clean && \
     rm -rf /var/lib/apt/lists/* && \
     echo "* * * * * echo 'Cron is running' >> /var/log/cron.log 2>&1" | crontab - && \
