@@ -8,16 +8,16 @@ from .interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, Recommendatio
 # Load environment variables from .env automatically
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(dotenv_path='/.env')  # Explicit path for Docker compatibility
 except ImportError:
     pass  # If dotenv is not installed, skip (but recommend installing for local dev)
 
 DB_CONFIG = {
-    'dbname': os.getenv('POSTGRES_DB', 'pad'),
-    'user': os.getenv('POSTGRES_USER', 'SpecialOsio'),
-    'password': os.getenv('POSTGRES_PASSWORD', 'oeh_ahb6Ahzah7exeish'),
-    'host': os.getenv('POSTGRES_HOST', 'postgres'),
-    'port': os.getenv('POSTGRES_PORT', 5432),
+    'dbname': os.getenv('POSTGRES_DB'),
+    'user': os.getenv('POSTGRES_USER'),
+    'password': os.getenv('POSTGRES_PASSWORD'),
+    'host': os.getenv('POSTGRES_HOST'),
+    'port': os.getenv('POSTGRES_PORT'),
 }
 ANALYSIS_VIEW = 'analysis_summary'
 
@@ -67,11 +67,39 @@ class PostgresRecommendationService:
         print(f"[Scheduler] Qualified coins for trading (score >= {threshold}): {coins}")
         return coins
 
+import subprocess
+
 class PrintCronJobManager:
     def create_jobs(self, symbols: List[str]) -> None:
         if not symbols:
             print("[Scheduler] No coins qualified for trading.")
             return
+        # Get current crontab
+        try:
+            result = subprocess.run(['crontab', '-l'], capture_output=True, text=True, check=False)
+            current_crontab = result.stdout if result.returncode == 0 else ''
+        except Exception as e:
+            print(f"[Scheduler] Could not read current crontab: {e}")
+            current_crontab = ''
+
+        new_jobs = []
         for symbol in symbols:
-            job = f"* * * * * /usr/bin/python /src/Trade/fictive_trade.py {symbol}"
-            print(f"[Scheduler] Would add cronjob: {job}")
+            buy_job = f"* * * * * /usr/bin/python -m Trade.main buy {symbol}"
+            sell_job = f"* * * * * /usr/bin/python -m Trade.main sell {symbol}"
+            if buy_job not in current_crontab:
+                new_jobs.append(buy_job)
+            if sell_job not in current_crontab:
+                new_jobs.append(sell_job)
+
+        if new_jobs:
+            # Combine existing crontab with new jobs
+            updated_crontab = current_crontab.strip() + '\n' + '\n'.join(new_jobs) + '\n'
+            try:
+                proc = subprocess.run(['crontab', '-'], input=updated_crontab, text=True, check=True)
+                for job in new_jobs:
+                    print(f"[Scheduler] Added cronjob: {job}")
+            except Exception as e:
+                print(f"[Scheduler] Failed to update crontab: {e}")
+        else:
+            print("[Scheduler] All relevant cronjobs already exist.")
+
