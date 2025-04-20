@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 
 export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [selectedToken, setSelectedToken] = useState('BTC');
   const [showCronjobs, setShowCronjobs] = useState(false);
   const [cronjobs, setCronjobs] = useState<any[]>([]);
@@ -42,6 +43,17 @@ export default function Home() {
   const [recommendation, setRecommendation] = useState('');
   const [recommendationDesc, setRecommendationDesc] = useState('');
 
+  // Map recommendation to color classes
+  const recommendationColor = {
+    'STRONG BUY': 'text-[#2DE282]', // bright green
+    'BUY': 'text-[#00FFB2]',       // teal
+    'HOLD': 'text-[#FFD600]',      // yellow
+    'WATCH': 'text-[#FF6A00]',     // orange
+    'AVOID': 'text-[#FF3B3B]',     // red
+    '': 'text-[#888888]'           // gray for no label
+  };
+
+
   useEffect(() => {
     // Fetch only analysed coins for dropdown
     fetch('/api/analysed_coins')
@@ -69,22 +81,22 @@ export default function Home() {
         let social = (data.social || []).filter(i => SOCIAL_LABELS.includes(i.name));
         social = SOCIAL_LABELS.map(label => social.find(i => i.name === label) || { name: label, value: 0 });
         setSocialIndicators(social);
-        // Compute total score as percent
+        // Use backend-computed score_percentage if available, else fall back to local calculation
         const techScore = technical.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
         const techMax = technical.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
         const socScore = social.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
         const socMax = social.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
         const total = techScore + socScore;
         const totalMax = techMax + socMax;
-        const percent = totalMax > 0 ? (100 * total / totalMax) : 0;
+        const percent = typeof data.score_percentage === 'number' ? data.score_percentage : (totalMax > 0 ? (100 * total / totalMax) : 0);
         setTotalScore(percent);
-        // Recommendation logic from README
+        // Recommendation logic from .env and backend
         let rec = '', desc = '';
-        if (percent >= 80) { rec = 'STRONG BUY'; desc = 'High potential for growth'; }
-        else if (percent >= 70) { rec = 'BUY'; desc = 'Good potential for growth'; }
-        else if (percent >= 60) { rec = 'HOLD'; desc = 'Moderate potential'; }
-        else if (percent >= 50) { rec = 'WATCH'; desc = 'Some concerns'; }
-        else { rec = 'AVOID'; desc = 'High risk or insufficient data'; }
+        if (percent >= 50) { rec = 'BUY'; desc = 'Good potential for growth'; }
+        else if (percent >= 40) { rec = 'HOLD'; desc = 'Moderate potential'; }
+        else if (percent >= 30) { rec = 'WATCH'; desc = 'Some concerns'; }
+        else if (percent >= 20) { rec = 'AVOID'; desc = 'Significant concerns'; }
+        else { rec = ''; desc = ''; }
         setRecommendation(rec);
         setRecommendationDesc(desc);
       })
@@ -109,113 +121,143 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-[#121212] font-inter px-2 sm:px-4">
         <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] shadow-lg">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 lg:mb-14 gap-4">
-            <div className="flex flex-row items-center gap-3">
-              <select
-                className="bg-[#242424] text-[#FF6A00] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg font-bold text-sm sm:text-base lg:text-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#FF6A00] cursor-pointer"
-                value={selectedToken}
-                onChange={e => setSelectedToken(e.target.value)}
+          {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
+          <div className="flex flex-row items-center justify-between w-full mb-4 lg:mb-8 gap-4">
+            {/* Left: Coin dropdown */}
+            <div className="flex flex-col items-start w-[220px] gap-2">
+              <div className="relative w-full max-w-[220px]">
+                <button
+                  className="w-full bg-[#242424] text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-[#FF6A00] transition-colors"
+                  onClick={() => setShowDropdown(d => !d)}
+                  type="button"
+                  style={{ minHeight: '44px' }}
+                >
+                  {selectedToken}
+                  <svg className="ml-2 w-4 h-4 text-[#FF6A00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showDropdown && (
+                  <div className="absolute z-10 w-full bg-[#242424] rounded-lg shadow-lg mt-2 max-h-60 overflow-auto border border-[#333]">
+                    {analysedCoins.map(symbol => (
+                      <div
+                        key={symbol}
+                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00] font-bold' : 'text-[#FF6A00] hover:bg-[#222]'}`}
+                        style={{ minHeight: '40px' }}
+                        onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
+                      >
+                        {symbol}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Center: Big percent and claim stacked */}
+            <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
+              <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
+                style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
               >
-                {analysedCoins.map(symbol => (
-                  <option key={symbol} value={symbol}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
+                {Math.floor(totalScore)}%
+              </span>
+            </div>
+            {/* Right: Cronjobs button */}
+            <div className="flex flex-row items-center gap-3 justify-end w-full sm:w-auto">
               <button
-                className="text-[#FF6A00] font-semibold text-xs sm:text-sm lg:text-lg hover:text-[#FFA64D] cursor-pointer bg-transparent border-none outline-none"
+                className="w-full sm:w-auto bg-[#242424] text-[#FF6A00] font-bold text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors mt-3 sm:mt-0 max-w-[220px]"
                 onClick={() => setShowCronjobs(true)}
               >
                 Cronjobs
               </button>
             </div>
-            <div className="flex flex-col items-center sm:items-end mt-2 sm:mt-0">
-              <span className="uppercase font-bold text-xs sm:text-sm lg:text-base mb-1">Recommendation</span>
-              <span className="text-2xl sm:text-3xl lg:text-5xl font-bold text-[#FF6A00] mb-2">{Math.round(totalScore)}%</span>
-              <div className="flex items-center gap-3">
-                <div className={`font-bold text-xs sm:text-sm lg:text-lg px-3 py-2 sm:px-4 lg:px-8 lg:py-3 rounded-lg glow-button flex items-center h-full ${recommendation === 'STRONG BUY' ? 'bg-[#2DE282] text-black' : recommendation === 'BUY' ? 'bg-[#FFDEB4] text-black' : recommendation === 'HOLD' ? 'bg-[#FFB800] text-black' : recommendation === 'WATCH' ? 'bg-[#FFA64D] text-black' : 'bg-[#FF6A00] text-white'}`}>
-                  {recommendation}
+          </div>
+
+          {/* Indicators Row: Social (left on desktop), Technical (right) */}
+          <div className="flex flex-col gap-8">
+            {/* Technical Indicators */}
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-2 mt-6">
+                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Technical</span>
+                <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
+                  const score = technicalIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
+                  const max = technicalIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
+                  return `${score.toFixed(1)}/${max} pts`;
+                })()}</span>
+              </div>
+              <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-6">
+                <div className="space-y-3">
+                  {loading ? (
+                    <div className="text-center text-[#FF6A00] py-4">Loading...</div>
+                  ) : (
+                    <>
+                      {technicalIndicators.map((indicator, idx) => (
+                        <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
+                          <span className="flex items-center gap-2">
+                            {indicator.name === 'Trading Volume' && <span>📊</span>}
+                            {indicator.name === 'Liquidity' && <span>💧</span>}
+                            {indicator.name === 'Whale Transactions' && <span>🐳</span>}
+                            {indicator.name === 'Token Distribution' && <span>📈</span>}
+                            {indicator.name === 'Pre-Sale Vesting' && <span>📆</span>}
+                            {indicator.name === 'Smart Contract Audit' && <span>📝</span>}
+                            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
+                          </span>
+                          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
+                            <div className="flex items-center gap-2 w-full">
+                              <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
+                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
+                                  {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
+                                  <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="text-[#00FFB2] text-xs sm:text-sm lg:text-base mt-2 text-right">{recommendationDesc}</div>
             </div>
-          </div>
-
-          {/* Technical Indicators */}
-          <div className="uppercase font-bold text-xs sm:text-sm lg:text-base mb-2 mt-6">Technical Indicators</div>
-          <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-6">
-            <div className="space-y-3">
-              {loading ? (
-                <div className="text-center text-[#FF6A00] py-4">Loading...</div>
-               ) : (
-                <>
-                  {technicalIndicators.map((indicator, idx) => (
-                    <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                      <span className="flex items-center gap-2">
-                        {indicator.name === 'Trading Volume' && <span>📈</span>}
-                        {indicator.name === 'Liquidity' && <span>💼</span>}
-                        {indicator.name === 'Whale Transactions' && <span>🔁</span>}
-                        {indicator.name === 'Token Distribution' && <span>📊</span>}
-                        {indicator.name === 'Pre-Sale Vesting' && <span>🛡️</span>}
-                        {indicator.name === 'Smart Contract Audit' && <span>📝</span>}
-                        {indicator.name}
-                      </span>
-                      <div className="w-1/2 progress-track ml-4">
-                        <div className="flex items-center gap-2 w-full">
-                          <div className="flex-grow">
-                            <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: `${indicator.max && indicator.max > 0 ? (100 * indicator.value / indicator.max) : 0}%` }}></div>
-                          </div>
-                          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                            <span className="flex flex-row items-center gap-1 text-white font-bold text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
-                              {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
-                              <span>({indicator.value}/{indicator.max})</span>
-                            </span>
+            {/* Social */}
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-2 mt-4 sm:mt-6 lg:mt-10">
+                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Social</span>
+                <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
+                  const score = socialIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
+                  const max = socialIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
+                  return max > 0 ? `${score}/${max} pts` : '0 pts';
+                })()}</span>
+              </div>
+              <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-4">
+                <div className="space-y-3">
+                  {loading ? (
+                    <div className="text-center text-[#FF6A00] py-4">Loading...</div>
+                  ) : (
+                    <>
+                      {socialIndicators.map((indicator, idx) => (
+                        <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
+                          <span className="flex items-center gap-2">
+                            {indicator.name === 'Social Volume' && <span>👥</span>}
+                            {indicator.name === 'Sentiment Analysis' && <span>😊</span>}
+                            {indicator.name === 'Developer Activity' && <span>📈</span>}
+                            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
+                          </span>
+                          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
+                            <div className="flex items-center gap-2 w-full">
+                              <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
+                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
+                                  {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
+                                  <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Social Indicators */}
-          <div className="uppercase font-bold text-xs sm:text-sm lg:text-base mb-2 mt-4 sm:mt-6 lg:mt-10">Social Indicators</div>
-          <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-4">
-            <div className="space-y-3">
-              {loading ? (
-                <div className="text-center text-[#FF6A00] py-4">Loading...</div>
-               ) : (
-                <>
-                  {socialIndicators.map((indicator, idx) => (
-                    <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                      <span className="flex items-center gap-2">
-                        {indicator.name === 'Social Volume' && <span>👥</span>}
-                        {indicator.name === 'Sentiment Analysis' && <span>😊</span>}
-                        {indicator.name === 'Developer Activity' && <span>📈</span>}
-                        {indicator.name}
-                      </span>
-                      <div className="w-1/2 progress-track ml-4">
-                        <div className="flex items-center gap-2 w-full">
-                          <div className="flex-grow">
-                            <div className="progress-bar bg-[#FF6A00] h-2 rounded-full" style={{ width: `${indicator.max && indicator.max > 0 ? (100 * indicator.value / indicator.max) : 0}%` }}></div>
-                          </div>
-                          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                            <span className="flex flex-row items-center gap-1 text-white font-bold text-[10px] sm:text-xs" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
-                              {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
-                              <span>({indicator.value}/{indicator.max})</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-
         </div>
         {/* Modal Overlay */}
         {showCronjobs && (
@@ -236,20 +278,63 @@ export default function Home() {
                   <div className="py-4 text-center">No cronjobs found.</div>
                 ) : (
                   <ul className="space-y-2">
-                    {cronjobs.map(job => (
+                    {[...cronjobs]
+                      .map(job => {
+                        // Attach a sortable date property
+                        try {
+                          const parts = job.schedule.split(' ');
+                          if (parts.length < 5) throw new Error('Invalid cron format');
+                          const [min, hour, day, month] = parts;
+                          const date = new Date(Date.UTC(
+                            new Date().getFullYear(),
+                            parseInt(month) - 1,
+                            parseInt(day),
+                            parseInt(hour),
+                            parseInt(min)
+                          ));
+                          return { ...job, _sortDate: date };
+                        } catch {
+                          return { ...job, _sortDate: null };
+                        }
+                      })
+                      .sort((a, b) => {
+                        if (a._sortDate && b._sortDate) return a._sortDate - b._sortDate;
+                        if (a._sortDate) return -1;
+                        if (b._sortDate) return 1;
+                        return 0;
+                      })
+                      .map(job => (
                       <li key={job.id} className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
-                        <span className="text-[#2DE282] font-semibold w-1/3 truncate">
+                        <span className="text-[#2DE282] font-semibold w-1/3 text-base sm:text-lg">
                           {(() => {
+                            // Custom cron to CET/CEST converter
                             try {
-                              const interval = parser.parseExpression(job.schedule, { tz: 'Europe/Paris' });
-                              const next = interval.next();
-                              return DateTime.fromJSDate(next, { zone: 'Europe/Paris' }).toFormat('dd.MM.yyyy HH:mm') + ' CET';
-                            } catch {
+                              const parts = job.schedule.split(' ');
+                              if (parts.length < 5) throw new Error('Invalid cron format');
+                              const [min, hour, day, month] = parts;
+                              const utcDate = new Date(Date.UTC(
+                                new Date().getFullYear(), // Use current year
+                                parseInt(month) - 1,
+                                parseInt(day),
+                                parseInt(hour),
+                                parseInt(min)
+                              ));
+                              const formatter = new Intl.DateTimeFormat('de-DE', {
+                                timeZone: 'Europe/Berlin',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false,
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              });
+                              return formatter.format(utcDate) + ' CET';
+                            } catch (e) {
                               return job.schedule;
                             }
                           })()}
                         </span>
-                        <span className="text-white break-all w-2/3 text-center">{job.command}</span>
+                        <span className="text-white break-all w-2/3 text-center text-base sm:text-lg">{job.command.replace('/usr/bin/python -m', '').replace('Trade.main', '').trim()}</span>
                       </li>
                     ))}
                   </ul>

@@ -95,7 +95,7 @@ SELECT
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
-        ) >= 80 THEN 'STRONG BUY - High potential for growth'
+        ) >= 50 THEN 'BUY - Good potential for growth'
         WHEN (
             COALESCE(t.trading_volume_score, 0) +
             COALESCE(t.liquidity_score, 0) +
@@ -107,7 +107,7 @@ SELECT
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
-        ) >= 70 THEN 'BUY - Good potential for growth'
+        ) >= 40 THEN 'HOLD - Moderate potential'
         WHEN (
             COALESCE(t.trading_volume_score, 0) +
             COALESCE(t.liquidity_score, 0) +
@@ -119,7 +119,7 @@ SELECT
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
-        ) >= 60 THEN 'HOLD - Moderate potential'
+        ) >= 30 THEN 'WATCH - Some concerns'
         WHEN (
             COALESCE(t.trading_volume_score, 0) +
             COALESCE(t.liquidity_score, 0) +
@@ -131,7 +131,7 @@ SELECT
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
-        ) >= 50 THEN 'WATCH - Some concerns'
+        ) >= 20 THEN 'AVOID - Significant concerns'
         ELSE 'AVOID - Significant concerns'
     END as recommendation
 FROM analyse_technical t

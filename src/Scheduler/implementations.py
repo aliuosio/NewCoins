@@ -79,7 +79,7 @@ class PostgresRecommendationService:
             threshold = 70.0
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
-        cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE total_score >= %s", (threshold,))
+        cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE FLOOR(score_percentage) >= %s", (threshold,))
         coins = [row[0] for row in cur.fetchall()]
         cur.close()
         conn.close()

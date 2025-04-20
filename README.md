@@ -10,7 +10,7 @@ A tool for automated cryptocurrency analysis using technical and social indicato
    ```bash
    docker compose up -d
    ```
-4. Enter the Python container shell to run analysis commands:
+4. Enter the Python container shell to run commands:
    ```bash
    docker compose exec python bash
    ```
@@ -36,8 +36,6 @@ python main.py analyze BTC --verbose
 python -m Scheduler.main
 ```
 
-Fetched coins are saved to the database for later analysis.
-
 ## Features & Indicators
 
 ### Technical Indicators (70 points)
@@ -55,8 +53,7 @@ Fetched coins are saved to the database for later analysis.
 
 ## Recommendations
 Based on total score percentage:
-- **STRONG BUY** (≥80%): High potential for growth
-- **BUY** (≥70%): Good potential for growth
-- **HOLD** (≥60%): Moderate potential
-- **WATCH** (≥50%): Some concerns
-- **AVOID** (<50%): Significant concerns
+- **BUY** (≥50%): Good potential for growth
+- **HOLD** (≥40%): Moderate potential
+- **WATCH** (≥30%): Some concerns
+- **AVOID** (≥20%): Significant concerns
