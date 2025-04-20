@@ -90,13 +90,13 @@ export default function Home() {
         const totalMax = techMax + socMax;
         const percent = totalMax > 0 ? (100 * total / totalMax) : 0;
         setTotalScore(percent);
-        // Recommendation logic from README
+        // Recommendation logic from .env and backend
         let rec = '', desc = '';
-        if (percent >= 80) { rec = 'STRONG BUY'; desc = 'High potential for growth'; }
-        else if (percent >= 70) { rec = 'BUY'; desc = 'Good potential for growth'; }
-        else if (percent >= 60) { rec = 'HOLD'; desc = 'Moderate potential'; }
-        else if (percent >= 50) { rec = 'WATCH'; desc = 'Some concerns'; }
-        else { rec = 'AVOID'; desc = ''; }
+        if (percent >= 50) { rec = 'BUY'; desc = 'Good potential for growth'; }
+        else if (percent >= 40) { rec = 'HOLD'; desc = 'Moderate potential'; }
+        else if (percent >= 30) { rec = 'WATCH'; desc = 'Some concerns'; }
+        else if (percent >= 20) { rec = 'AVOID'; desc = 'Significant concerns'; }
+        else { rec = ''; desc = ''; }
         setRecommendation(rec);
         setRecommendationDesc(desc);
       })
@@ -122,9 +122,9 @@ export default function Home() {
         <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] shadow-lg">
           {/* Header */}
           {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full mb-10 lg:mb-14 gap-4">
-            {/* Left: Coin name and dropdown */}
-            <div className="flex flex-col items-center sm:items-start w-full sm:w-auto gap-2">
+          <div className="flex flex-row items-center justify-between w-full mb-4 lg:mb-8 gap-4">
+            {/* Left: Coin dropdown */}
+            <div className="flex flex-col items-start w-[220px] gap-2">
               <div className="relative w-full max-w-[220px]">
                 <button
                   className="w-full bg-[#242424] text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-[#FF6A00] transition-colors"
@@ -140,7 +140,7 @@ export default function Home() {
                     {analysedCoins.map(symbol => (
                       <div
                         key={symbol}
-                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#FF6A00] text-white font-bold' : 'text-[#FF6A00] hover:bg-[#333]'}`}
+                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00] font-bold' : 'text-[#FF6A00] hover:bg-[#222]'}`}
                         style={{ minHeight: '40px' }}
                         onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
                       >
@@ -151,25 +151,13 @@ export default function Home() {
                 )}
               </div>
             </div>
-            {/* Center: Percent and risk level stacked */}
-            <div className="flex flex-col items-center justify-center flex-1 w-full sm:w-auto gap-2 mt-2 sm:mt-0">
-              <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
+            {/* Center: Big percent and claim stacked */}
+            <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
+              <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
                 style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
               >
-                {Math.round(totalScore)}%
+                {Math.floor(totalScore)}%
               </span>
-              {recommendation && recommendation === 'AVOID' && (
-                <span className="font-bold text-base sm:text-lg lg:text-xl text-[#FF3B3B] mt-1" style={{ letterSpacing: '0.04em' }}>
-                  {recommendation}
-                </span>
-              )}
-              {recommendation && recommendation !== 'AVOID' && (
-                <span className={`font-bold text-base sm:text-lg lg:text-xl mt-1 ${recommendationColor[recommendation] || 'text-[#888888]'}`}
-                  style={{ letterSpacing: '0.04em' }}
-                >
-                  {recommendation}
-                </span>
-              )}
             </div>
             {/* Right: Cronjobs button */}
             <div className="flex flex-row items-center gap-3 justify-end w-full sm:w-auto">
@@ -187,11 +175,11 @@ export default function Home() {
             {/* Technical Indicators */}
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2 mt-6">
-                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Technical Indicators</span>
+                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Technical</span>
                 <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
                   const score = technicalIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
                   const max = technicalIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
-                  return max > 0 ? `${score}/${max} pts` : '0 pts';
+                  return `${score.toFixed(1)}/${max} pts`;
                 })()}</span>
               </div>
               <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-6">
@@ -228,10 +216,10 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            {/* Social Indicators */}
+            {/* Social */}
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2 mt-4 sm:mt-6 lg:mt-10">
-                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Social Indicators</span>
+                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Social</span>
                 <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
                   const score = socialIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
                   const max = socialIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
