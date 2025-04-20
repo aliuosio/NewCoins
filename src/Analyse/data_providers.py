@@ -34,12 +34,42 @@ class CoinGeckoProvider(BaseDataProvider):
         
         super().__init__("coingecko", cache, rate_limiter, api_requester)
 
+        # Setup API log file handler for verbose mode
+        self.api_log_path = '/src/api_log.txt'
+        self._api_log_enabled = False
+        if getattr(self, '_verbose', False):
+            self._api_log_enabled = True
+
+    def _log_api(self, message: str):
+        if getattr(self, '_verbose', False) or self._api_log_enabled:
+            try:
+                with open(self.api_log_path, 'a') as f:
+                    f.write(f"[{datetime.now()}] {message}\n")
+            except Exception as e:
+                pass
+
     def _get_coin_id(self, symbol: str) -> Optional[str]:
-        # print(f"[DEBUG] _get_coin_id called with symbol={symbol}")
-        """Get CoinGecko coin ID from symbol"""
+        """Get CoinGecko coin ID from symbol, with explicit mapping for major coins."""
         # Normalize symbol
         symbol = symbol.upper()
-        
+        # Explicit mapping for major coins
+        symbol_to_id = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana',
+            'DOGE': 'dogecoin',
+            'BNB': 'binancecoin',
+            'USDT': 'tether',
+            'USDC': 'usd-coin',
+            'ADA': 'cardano',
+            'XRP': 'ripple',
+            'TRX': 'tron',
+            # Add more as needed
+        }
+        if symbol in symbol_to_id:
+            coin_id = symbol_to_id[symbol]
+            self._logger.info(f"[COIN_ID_RESOLVE] Symbol {symbol} mapped to CoinGecko ID '{coin_id}' (explicit mapping)")
+            return coin_id
         # Fetch the coin list from CoinGecko API (with caching)
         try:
             cache_key = "coingecko_coin_list"
@@ -172,17 +202,9 @@ class CoinGeckoProvider(BaseDataProvider):
 
 
     def _fetch_data(self, symbol: str) -> Dict[str, Any]:
-        # Print working directory and forced test write to confirm file access
         import os
-        # print(f"[RAW-API-DEBUG] Current working directory: {os.getcwd()}")
-        # Only write debug info if verbose flag is set
-        if getattr(self, '_verbose', False):
-            try:
-                with open('/src/raw_api_debug.txt', 'a') as f:
-                    f.write(f"TEST-WRITE: _fetch_data called for {symbol}\n")
-            except Exception as e:
-                # print(f"[RAW-API-DEBUG][ERROR] Could not write test entry: {e}")
-                pass
+        # Log API call if verbose
+        self._log_api(f"_fetch_data called for symbol: {symbol}")
         # Confirm function is called (inside Docker container)
         try:
             with open('/tmp/fetch_data_called.log', 'a') as f:
@@ -252,14 +274,29 @@ class CoinGeckoProvider(BaseDataProvider):
             market_cap = safe_float(market_data.get('market_cap', {}).get('usd', 0), 'market_cap')
             # Calculate 24h volume from /coins/{id}/market_chart endpoint
             try:
-                # Use the already-fetched market_chart (1 day)
-                one_day_chart = self._get_market_chart(coin_id, days=1)
-                volumes = one_day_chart.get('total_volumes', [])
-                if volumes:
-                    # Each entry is [timestamp, volume]. Sum all volume values for the period.
-                    total_volume_24h = sum([safe_float(v[1], 'total_volumes') for v in volumes])
-                else:
-                    total_volume_24h = 0.0
+                # Try to get 24h volume from /coins/markets endpoint first
+                try:
+                    params = {
+                        'vs_currency': 'usd',
+                        'ids': coin_id,
+                    }
+                    self._log_api(f"Request: /coins/markets params={params}")
+                    markets_data = self._api_requester.make_request('coins/markets', params=params)
+                    self._log_api(f"Response: /coins/markets data={str(markets_data)[:500]}")
+                    if markets_data and isinstance(markets_data, list) and len(markets_data) > 0:
+                        total_volume_24h = safe_float(markets_data[0].get('total_volume', 0), 'total_volume_24h')
+                    else:
+                        raise ValueError('No markets data found')
+                except Exception as e:
+                    # Fallback to /market_chart method
+                    self._log_api(f"Request: /coins/{coin_id}/market_chart days=1")
+                    one_day_chart = self._get_market_chart(coin_id, days=1)
+                    self._log_api(f"Response: /coins/{coin_id}/market_chart data={str(one_day_chart)[:500]}")
+                    volumes = one_day_chart.get('total_volumes', [])
+                    if len(volumes) >= 2:
+                        total_volume_24h = safe_float(volumes[-1][1], 'total_volumes') - safe_float(volumes[0][1], 'total_volumes')
+                    else:
+                        total_volume_24h = 0.0
             except Exception as e:
                 self._logger.error(f"Error calculating 24h volume from /coins/{coin_id}/market_chart for {symbol}: {str(e)}")
                 total_volume_24h = 0.0
