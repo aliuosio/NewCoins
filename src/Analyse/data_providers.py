@@ -3,6 +3,7 @@ Data provider implementations for fetching cryptocurrency data.
 """
 import os
 import logging
+import numbers
 import requests
 import time
 import hashlib
@@ -33,71 +34,67 @@ class CoinGeckoProvider(BaseDataProvider):
         
         super().__init__("coingecko", cache, rate_limiter, api_requester)
 
+        # Setup API log file handler for verbose mode
+        self.api_log_path = '/src/api_log.txt'
+        self._api_log_enabled = False
+        if getattr(self, '_verbose', False):
+            self._api_log_enabled = True
+
+    def _log_api(self, message: str):
+        if getattr(self, '_verbose', False) or self._api_log_enabled:
+            try:
+                with open(self.api_log_path, 'a') as f:
+                    f.write(f"[{datetime.now()}] {message}\n")
+            except Exception as e:
+                pass
+
     def _get_coin_id(self, symbol: str) -> Optional[str]:
-        print(f"[DEBUG] _get_coin_id called with symbol={symbol}")
-        """Get CoinGecko coin ID from symbol"""
+        """Get CoinGecko coin ID from symbol, with explicit mapping for major coins."""
         # Normalize symbol
         symbol = symbol.upper()
-        
-        # Hardcoded mappings for common coins
-        common_coins = {
+        # Explicit mapping for major coins
+        symbol_to_id = {
             'BTC': 'bitcoin',
             'ETH': 'ethereum',
-            'BNB': 'binance-coin',
             'SOL': 'solana',
+            'DOGE': 'dogecoin',
+            'BNB': 'binancecoin',
+            'USDT': 'tether',
+            'USDC': 'usd-coin',
             'ADA': 'cardano',
             'XRP': 'ripple',
-            'DOT': 'polkadot',
-            'DOGE': 'dogecoin',
-            'AVAX': 'avalanche-2',
-            'MATIC': 'polygon',
-            'LINK': 'chainlink',
-            'LTC': 'litecoin',
             'TRX': 'tron',
-            'UNI': 'uniswap',
-            'ATOM': 'cosmos',
-            'APT': 'aptos',
-            'XLM': 'stellar',
-            'ETC': 'ethereum-classic',
-            'VET': 'vechain',
-            'NEAR': 'near',
-            'FIL': 'filecoin',
-            'ALGO': 'algorand'
+            # Add more as needed
         }
-        
-        # Check hardcoded mapping first
-        if symbol in common_coins:
-            print(f"[DEBUG] _get_coin_id found in hardcoded: {symbol} -> {common_coins[symbol]}")
-            return common_coins[symbol]
-        
-        # Check cache
-        cache_key = f"coin_list"
-        cached_data = self._cache.get(cache_key)
-        
-        if cached_data:
-            coin_list = cached_data
-            # Look for the symbol in the cached list
+        if symbol in symbol_to_id:
+            coin_id = symbol_to_id[symbol]
+            self._logger.info(f"[COIN_ID_RESOLVE] Symbol {symbol} mapped to CoinGecko ID '{coin_id}' (explicit mapping)")
+            return coin_id
+        # Fetch the coin list from CoinGecko API (with caching)
+        try:
+            cache_key = "coingecko_coin_list"
+            coin_list = self._cache.get(cache_key)
+            if not coin_list:
+                coin_list = self._api_requester.make_request("coins/list")
+                self._cache.set(cache_key, coin_list, ttl=3600)
+
+            # Look for the symbol in the fetched list
             for coin in coin_list:
                 if coin['symbol'].lower() == symbol.lower():
+                    # print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
                     return coin['id']
-            return None
-        
-        try:
-            response = self._api_requester.make_request("coins/list")
-            coin_list = response
-            self._cache.set(cache_key, coin_list)
             
             # Look for the symbol in the fetched list
             for coin in coin_list:
                 if coin['symbol'].lower() == symbol.lower():
-                    print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
+                    # print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
                     return coin['id']
-            print(f"[DEBUG] _get_coin_id NOT FOUND for symbol={symbol}")
+            # print(f"[DEBUG] _get_coin_id NOT FOUND for symbol={symbol}")
             return None
             
         except Exception as e:
             self._logger.error(f"Error fetching coin list for {symbol}: {str(e)}")
-            print(f"[DEBUG] _get_coin_id exception for symbol={symbol}: {e}")
+            # print(f"[DEBUG] _get_coin_id exception for symbol={symbol}: {e}")
             return None
 
 
@@ -128,7 +125,14 @@ class CoinGeckoProvider(BaseDataProvider):
             return {}
             
     def _get_market_chart(self, coin_id: str, days: int = 90) -> Dict[str, Any]:
-        print(f"[DEBUG] _get_market_chart called for coin_id={coin_id}, days={days}")
+        # Confirm function is called (inside Docker container)
+        try:
+            with open('/tmp/market_chart_called.log', 'a') as f:
+                import datetime
+                f.write(f"{datetime.datetime.now()} CALLED _get_market_chart for coin_id={coin_id}, days={days}\n")
+        except Exception as log_exc:
+            pass
+        # print(f"[DEBUG] _get_market_chart called for coin_id={coin_id}, days={days}")
         """Get historical market data for a specific coin
         
         Args:
@@ -141,31 +145,73 @@ class CoinGeckoProvider(BaseDataProvider):
         try:
             # Get from cache first
             cache_key = f"market_chart_{coin_id}_{days}"
-            if cached_data := self._cache.get(cache_key):
-                self._logger.debug(f"Using cached market chart for {coin_id}")
+            cached_data = self._cache.get(cache_key)
+            import datetime
+            def _log_to_file(message):
+                with open('/tmp/coingecko_market_chart_debug.log', 'a') as f:
+                    f.write(f"{datetime.datetime.now()} {message}\n")
+
+            if cached_data:
+                # self._logger.debug(f"Using cached market chart for {coin_id}")
+                msg = f"[DEBUG] market_chart (cached) for {coin_id}: keys={list(cached_data.keys()) if isinstance(cached_data, dict) else type(cached_data)}"
+                # print(msg)
+                _log_to_file(msg)
+                # Optionally print a sample of the data
+                if isinstance(cached_data, dict):
+                    for k in cached_data:
+                        sample = f"[DEBUG] cached {k}: sample={str(cached_data[k])[:200]}"
+                        # print(sample)
+                        _log_to_file(sample)
                 return cached_data
-            
+            else:
+                msg = f"[DEBUG] No cache for market_chart {coin_id}, making real API call..."
+                # print(msg)
+                _log_to_file(msg)
             # Fetch from API
             params = {
                 'vs_currency': 'usd',
-                'days': str(days),
-                'interval': 'hourly'
+                'days': str(days)
             }
-            
             response = self._api_requester.make_request(f"coins/{coin_id}/market_chart", params=params)
-            
+            msg = f"[DEBUG] market_chart (API) for {coin_id}: keys={list(response.keys()) if isinstance(response, dict) else type(response)}"
+            # print(msg)
+            _log_to_file(msg)
+            if isinstance(response, dict):
+                for k in response:
+                    sample = f"[DEBUG] API {k}: sample={str(response[k])[:200]}"
+                    # print(sample)
+                    _log_to_file(sample)
             # Cache the response (1 hour TTL)
             self._cache.set(cache_key, response, ttl=3600)
-            
             return response
             
         except Exception as e:
+            import traceback
+            # Log error to file inside Docker container
+            try:
+                with open('/tmp/market_chart_error.log', 'a') as f:
+                    import datetime
+                    f.write(f"{datetime.datetime.now()} ERROR in _get_market_chart for coin_id={coin_id}, days={days}: {str(e)}\n")
+                    f.write(traceback.format_exc() + "\n")
+            except Exception as log_exc:
+                pass
             self._logger.error(f"Error getting market chart for {coin_id}: {str(e)}")
+            self._logger.error(traceback.format_exc())
             raise APIError(f"Error getting market chart for {coin_id}: {str(e)}")
 
 
 
     def _fetch_data(self, symbol: str) -> Dict[str, Any]:
+        import os
+        # Log API call if verbose
+        self._log_api(f"_fetch_data called for symbol: {symbol}")
+        # Confirm function is called (inside Docker container)
+        try:
+            with open('/tmp/fetch_data_called.log', 'a') as f:
+                import datetime
+                f.write(f"{datetime.datetime.now()} CALLED _fetch_data for symbol={symbol}\n")
+        except Exception as log_exc:
+            pass
         """
         Fetch data from CoinGecko API
         
@@ -197,7 +243,7 @@ class CoinGeckoProvider(BaseDataProvider):
             cached_data = self._cache.get(cache_key)
             
             if cached_data:
-                self._logger.debug(f"Using cached comprehensive data for {symbol}")
+                # self._logger.debug(f"Using cached comprehensive data for {symbol}")
                 return cached_data
             
             # Get comprehensive coin data
@@ -208,29 +254,55 @@ class CoinGeckoProvider(BaseDataProvider):
             
             # Extract relevant data
             market_data = coin_data.get('market_data', {})
-            
+
             # Ensure market chart data is properly included in the returned structure
             if market_chart:
                 coin_data['market_chart'] = market_chart
-            price_usd = market_data.get('current_price', {}).get('usd', 0)
-            market_cap = market_data.get('market_cap', {}).get('usd', 0)
-            # Calculate total_volume_24h from market_chart if available
-            total_volume_24h = 0
-            if market_chart and 'total_volumes' in market_chart and market_chart['total_volumes']:
-                # CoinGecko returns [ [timestamp, volume], ... ]
-                volumes = [v[1] for v in market_chart['total_volumes'] if isinstance(v, list) and len(v) == 2]
-                if len(volumes) >= 2:
-                    total_volume_24h = volumes[-1] - volumes[0]
-                elif volumes:
-                    total_volume_24h = volumes[-1]
-            print(f"market_chart['total_volumes']: {market_chart.get('total_volumes', None)}")
-            print(f"Calculated total_volume_24h: {total_volume_24h}")
-            if self._logger:
-                self._logger.debug(f"market_chart['total_volumes']: {market_chart.get('total_volumes', None)}")
-                self._logger.debug(f"Calculated total_volume_24h: {total_volume_24h}")
-            if not total_volume_24h:
-                total_volume_24h = market_data.get('total_volume', {}).get('usd', 0)
-            
+
+            def safe_float(val, name):
+                if isinstance(val, numbers.Real):
+                    return float(val)
+                elif isinstance(val, complex):
+                    # print(f"[DEBUG][CoinGeckoProvider] {name} is complex ({val}), using real part only.")
+                    return float(val.real)
+                try:
+                    return float(val)
+                except Exception as e:
+                    # print(f"[DEBUG][CoinGeckoProvider] Could not convert {name}={val} to float: {e}")
+                    return 0.0
+            price_usd = safe_float(market_data.get('current_price', {}).get('usd', 0), 'price_usd')
+            market_cap = safe_float(market_data.get('market_cap', {}).get('usd', 0), 'market_cap')
+            # Calculate 24h volume from /coins/{id}/market_chart endpoint
+            try:
+                # Try to get 24h volume from /coins/markets endpoint first
+                try:
+                    params = {
+                        'vs_currency': 'usd',
+                        'ids': coin_id,
+                    }
+                    self._log_api(f"Request: /coins/markets params={params}")
+                    markets_data = self._api_requester.make_request('coins/markets', params=params)
+                    self._log_api(f"Response: /coins/markets data={str(markets_data)[:500]}")
+                    if markets_data and isinstance(markets_data, list) and len(markets_data) > 0:
+                        total_volume_24h = safe_float(markets_data[0].get('total_volume', 0), 'total_volume_24h')
+                    else:
+                        raise ValueError('No markets data found')
+                except Exception as e:
+                    # Fallback to /market_chart method
+                    self._log_api(f"Request: /coins/{coin_id}/market_chart days=1")
+                    one_day_chart = self._get_market_chart(coin_id, days=1)
+                    self._log_api(f"Response: /coins/{coin_id}/market_chart data={str(one_day_chart)[:500]}")
+                    volumes = one_day_chart.get('total_volumes', [])
+                    if len(volumes) >= 2:
+                        total_volume_24h = safe_float(volumes[-1][1], 'total_volumes') - safe_float(volumes[0][1], 'total_volumes')
+                    else:
+                        total_volume_24h = 0.0
+            except Exception as e:
+                self._logger.error(f"Error calculating 24h volume from /coins/{coin_id}/market_chart for {symbol}: {str(e)}")
+                total_volume_24h = 0.0
+            # Placeholder for future: fetch tickers for liquidity analysis
+            # tickers = self._api_requester.make_request(f"coins/{coin_id}/tickers")
+
             # Get community data
             community_data = coin_data.get('community_data', {})
             

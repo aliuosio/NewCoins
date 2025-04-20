@@ -58,6 +58,14 @@ class BaseDataProvider(IDataProvider):
         Returns:
             Dictionary containing all relevant data
         """
+        # Debug: Log entry to file
+        try:
+            with open('/tmp/get_data_called.log', 'a') as f:
+                import datetime
+                f.write(f"{datetime.datetime.now()} CALLED get_data for symbol={symbol}\n")
+        except Exception as log_exc:
+            pass
+        
         try:
             # Check cache first
             cache_key = self._generate_cache_key(symbol)
@@ -99,16 +107,4 @@ class BaseDataProvider(IDataProvider):
         return 3600  # Default 1 hour
 
 
-class CoinGeckoDataProvider(BaseDataProvider):
-    """Data provider that fetches data from CoinGecko API"""
-    
-    def __init__(self, 
-                 cache: ICache, 
-                 rate_limiter: IRateLimiter, 
-                 api_requester: IApiRequester):
-        super().__init__("coingecko", cache, rate_limiter, api_requester)
-    
-    def _fetch_data(self, symbol: str) -> Dict[str, Any]:
-        """Fetch data from CoinGecko API"""
-        # Implementation will be moved here from the old provider
-        pass
+
