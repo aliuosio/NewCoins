@@ -53,8 +53,7 @@ python -m Scheduler.main
 
 ## Recommendations
 Based on total score percentage:
-- **STRONG BUY** (≥80%): High potential for growth
-- **BUY** (≥70%): Good potential for growth
-- **HOLD** (≥60%): Moderate potential
-- **WATCH** (≥50%): Some concerns
-- **AVOID** (<50%): Significant concerns
+- **BUY** (≥50%): Good potential for growth
+- **HOLD** (≥40%): Moderate potential
+- **WATCH** (≥30%): Some concerns
+- **AVOID** (≥20%): Significant concerns
