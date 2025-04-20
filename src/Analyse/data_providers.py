@@ -34,6 +34,7 @@ class CoinGeckoProvider(BaseDataProvider):
         super().__init__("coingecko", cache, rate_limiter, api_requester)
 
     def _get_coin_id(self, symbol: str) -> Optional[str]:
+        print(f"[DEBUG] _get_coin_id called with symbol={symbol}")
         """Get CoinGecko coin ID from symbol"""
         # Normalize symbol
         symbol = symbol.upper()
@@ -66,6 +67,7 @@ class CoinGeckoProvider(BaseDataProvider):
         
         # Check hardcoded mapping first
         if symbol in common_coins:
+            print(f"[DEBUG] _get_coin_id found in hardcoded: {symbol} -> {common_coins[symbol]}")
             return common_coins[symbol]
         
         # Check cache
@@ -88,11 +90,14 @@ class CoinGeckoProvider(BaseDataProvider):
             # Look for the symbol in the fetched list
             for coin in coin_list:
                 if coin['symbol'].lower() == symbol.lower():
+                    print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
                     return coin['id']
+            print(f"[DEBUG] _get_coin_id NOT FOUND for symbol={symbol}")
             return None
             
         except Exception as e:
             self._logger.error(f"Error fetching coin list for {symbol}: {str(e)}")
+            print(f"[DEBUG] _get_coin_id exception for symbol={symbol}: {e}")
             return None
 
 
@@ -123,6 +128,7 @@ class CoinGeckoProvider(BaseDataProvider):
             return {}
             
     def _get_market_chart(self, coin_id: str, days: int = 90) -> Dict[str, Any]:
+        print(f"[DEBUG] _get_market_chart called for coin_id={coin_id}, days={days}")
         """Get historical market data for a specific coin
         
         Args:
@@ -155,7 +161,7 @@ class CoinGeckoProvider(BaseDataProvider):
             
         except Exception as e:
             self._logger.error(f"Error getting market chart for {coin_id}: {str(e)}")
-            return {'prices': [], 'market_caps': [], 'total_volumes': []}
+            raise APIError(f"Error getting market chart for {coin_id}: {str(e)}")
 
 
 
@@ -208,7 +214,22 @@ class CoinGeckoProvider(BaseDataProvider):
                 coin_data['market_chart'] = market_chart
             price_usd = market_data.get('current_price', {}).get('usd', 0)
             market_cap = market_data.get('market_cap', {}).get('usd', 0)
-            total_volume_24h = market_data.get('total_volume', {}).get('usd', 0)
+            # Calculate total_volume_24h from market_chart if available
+            total_volume_24h = 0
+            if market_chart and 'total_volumes' in market_chart and market_chart['total_volumes']:
+                # CoinGecko returns [ [timestamp, volume], ... ]
+                volumes = [v[1] for v in market_chart['total_volumes'] if isinstance(v, list) and len(v) == 2]
+                if len(volumes) >= 2:
+                    total_volume_24h = volumes[-1] - volumes[0]
+                elif volumes:
+                    total_volume_24h = volumes[-1]
+            print(f"market_chart['total_volumes']: {market_chart.get('total_volumes', None)}")
+            print(f"Calculated total_volume_24h: {total_volume_24h}")
+            if self._logger:
+                self._logger.debug(f"market_chart['total_volumes']: {market_chart.get('total_volumes', None)}")
+                self._logger.debug(f"Calculated total_volume_24h: {total_volume_24h}")
+            if not total_volume_24h:
+                total_volume_24h = market_data.get('total_volume', {}).get('usd', 0)
             
             # Get community data
             community_data = coin_data.get('community_data', {})
