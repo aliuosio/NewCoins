@@ -42,6 +42,17 @@ export default function Home() {
   const [recommendation, setRecommendation] = useState('');
   const [recommendationDesc, setRecommendationDesc] = useState('');
 
+  // Map recommendation to color classes
+  const recommendationColor = {
+    'STRONG BUY': 'text-[#2DE282]', // bright green
+    'BUY': 'text-[#00FFB2]',       // teal
+    'HOLD': 'text-[#FFD600]',      // yellow
+    'WATCH': 'text-[#FF6A00]',     // orange
+    'AVOID': 'text-[#FF3B3B]',     // red
+    '': 'text-[#888888]'           // gray for no label
+  };
+
+
   useEffect(() => {
     // Fetch only analysed coins for dropdown
     fetch('/api/analysed_coins')
@@ -84,7 +95,7 @@ export default function Home() {
         else if (percent >= 70) { rec = 'BUY'; desc = 'Good potential for growth'; }
         else if (percent >= 60) { rec = 'HOLD'; desc = 'Moderate potential'; }
         else if (percent >= 50) { rec = 'WATCH'; desc = 'Some concerns'; }
-        else { rec = ''; desc = ''; }
+        else { rec = 'AVOID'; desc = ''; }
         setRecommendation(rec);
         setRecommendationDesc(desc);
       })
@@ -110,6 +121,7 @@ export default function Home() {
         <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] shadow-lg">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 lg:mb-14 gap-4">
+            {/* Left: Token selector */}
             <div className="flex flex-row items-center gap-3">
               <select
                 className="bg-[#242424] text-[#FF6A00] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg font-bold text-sm sm:text-base lg:text-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#FF6A00] cursor-pointer"
@@ -122,19 +134,36 @@ export default function Home() {
                   </option>
                 ))}
               </select>
+            </div>
+            {/* Center: Percent and risk level stacked */}
+            <div className="flex flex-col items-center justify-center flex-1">
+              <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
+                style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
+              >
+                {Math.round(totalScore)}%
+              </span>
+              {recommendation && recommendation === 'AVOID' && (
+                <span className="font-bold text-base sm:text-lg lg:text-xl text-[#FF3B3B] mt-1" style={{ letterSpacing: '0.04em' }}>
+                  {recommendation}
+                </span>
+              )}
+              {recommendation && recommendation !== 'AVOID' && (
+                <span className={`font-bold text-base sm:text-lg lg:text-xl mt-1 ${recommendationColor[recommendation] || 'text-[#888888]'}`}
+                  style={{ letterSpacing: '0.04em' }}
+                >
+                  {recommendation}
+                </span>
+              )}
+            </div>
+            {/* Right: Cronjobs button */}
+            <div className="flex flex-row items-center gap-3 justify-end">
               <button
-                className="text-[#FF6A00] font-semibold text-xs sm:text-sm lg:text-lg hover:text-[#FFA64D] cursor-pointer bg-transparent border-none outline-none"
+                className="bg-[#242424] text-[#FF6A00] font-bold text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors"
                 onClick={() => setShowCronjobs(true)}
               >
                 Cronjobs
               </button>
             </div>
-            <div className="flex flex-col w-full mt-2 sm:mt-0">
-  <div className="flex flex-col w-full">
-  <span className="text-2xl sm:text-3xl lg:text-5xl font-bold text-center sm:text-right w-full text-[#2DE282] sm:mb-0 -mb-1">{Math.round(totalScore)}%</span>
-  <div className="text-[#00FFB2] text-xs sm:text-sm lg:text-base text-right w-full sm:w-auto">{recommendationDesc}</div>
-</div>
-</div>
           </div>
 
           {/* Indicators Row: Social (left on desktop), Technical (right) */}
