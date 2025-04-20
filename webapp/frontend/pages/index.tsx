@@ -4,6 +4,7 @@ import { DateTime } from 'luxon';
 
 export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [selectedToken, setSelectedToken] = useState('BTC');
   const [showCronjobs, setShowCronjobs] = useState(false);
   const [cronjobs, setCronjobs] = useState<any[]>([]);
@@ -120,23 +121,38 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-[#121212] font-inter px-2 sm:px-4">
         <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] shadow-lg">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 lg:mb-14 gap-4">
-            {/* Left: Token selector */}
-            <div className="flex flex-row items-center gap-3">
-              <select
-                className="bg-[#242424] text-[#FF6A00] px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg font-bold text-sm sm:text-base lg:text-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#FF6A00] cursor-pointer"
-                value={selectedToken}
-                onChange={e => setSelectedToken(e.target.value)}
-              >
-                {analysedCoins.map(symbol => (
-                  <option key={symbol} value={symbol}>
-                    {symbol}
-                  </option>
-                ))}
-              </select>
+          {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full mb-10 lg:mb-14 gap-4">
+            {/* Left: Coin name and dropdown */}
+            <div className="flex flex-col items-center sm:items-start w-full sm:w-auto gap-2">
+              <div className="relative w-full max-w-[220px]">
+                <button
+                  className="w-full bg-[#242424] text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-[#FF6A00] transition-colors"
+                  onClick={() => setShowDropdown(d => !d)}
+                  type="button"
+                  style={{ minHeight: '44px' }}
+                >
+                  {selectedToken}
+                  <svg className="ml-2 w-4 h-4 text-[#FF6A00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {showDropdown && (
+                  <div className="absolute z-10 w-full bg-[#242424] rounded-lg shadow-lg mt-2 max-h-60 overflow-auto border border-[#333]">
+                    {analysedCoins.map(symbol => (
+                      <div
+                        key={symbol}
+                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#FF6A00] text-white font-bold' : 'text-[#FF6A00] hover:bg-[#333]'}`}
+                        style={{ minHeight: '40px' }}
+                        onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
+                      >
+                        {symbol}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             {/* Center: Percent and risk level stacked */}
-            <div className="flex flex-col items-center justify-center flex-1">
+            <div className="flex flex-col items-center justify-center flex-1 w-full sm:w-auto gap-2 mt-2 sm:mt-0">
               <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
                 style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
               >
@@ -156,9 +172,9 @@ export default function Home() {
               )}
             </div>
             {/* Right: Cronjobs button */}
-            <div className="flex flex-row items-center gap-3 justify-end">
+            <div className="flex flex-row items-center gap-3 justify-end w-full sm:w-auto">
               <button
-                className="bg-[#242424] text-[#FF6A00] font-bold text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors"
+                className="w-full sm:w-auto bg-[#242424] text-[#FF6A00] font-bold text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors mt-3 sm:mt-0 max-w-[220px]"
                 onClick={() => setShowCronjobs(true)}
               >
                 Cronjobs
