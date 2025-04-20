@@ -39,53 +39,19 @@ class CoinGeckoProvider(BaseDataProvider):
         # Normalize symbol
         symbol = symbol.upper()
         
-        # Hardcoded mappings for common coins
-        common_coins = {
-            'BTC': 'bitcoin',
-            'ETH': 'ethereum',
-            'BNB': 'binance-coin',
-            'SOL': 'solana',
-            'ADA': 'cardano',
-            'XRP': 'ripple',
-            'DOT': 'polkadot',
-            'DOGE': 'dogecoin',
-            'AVAX': 'avalanche-2',
-            'MATIC': 'polygon',
-            'LINK': 'chainlink',
-            'LTC': 'litecoin',
-            'TRX': 'tron',
-            'UNI': 'uniswap',
-            'ATOM': 'cosmos',
-            'APT': 'aptos',
-            'XLM': 'stellar',
-            'ETC': 'ethereum-classic',
-            'VET': 'vechain',
-            'NEAR': 'near',
-            'FIL': 'filecoin',
-            'ALGO': 'algorand'
-        }
-        
-        # Check hardcoded mapping first
-        if symbol in common_coins:
-            print(f"[DEBUG] _get_coin_id found in hardcoded: {symbol} -> {common_coins[symbol]}")
-            return common_coins[symbol]
-        
-        # Check cache
-        cache_key = f"coin_list"
-        cached_data = self._cache.get(cache_key)
-        
-        if cached_data:
-            coin_list = cached_data
-            # Look for the symbol in the cached list
+        # Fetch the coin list from CoinGecko API (with caching)
+        try:
+            cache_key = "coingecko_coin_list"
+            coin_list = self._cache.get(cache_key)
+            if not coin_list:
+                coin_list = self._api_requester.make_request("coins/list")
+                self._cache.set(cache_key, coin_list, ttl=3600)
+
+            # Look for the symbol in the fetched list
             for coin in coin_list:
                 if coin['symbol'].lower() == symbol.lower():
+                    print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
                     return coin['id']
-            return None
-        
-        try:
-            response = self._api_requester.make_request("coins/list")
-            coin_list = response
-            self._cache.set(cache_key, coin_list)
             
             # Look for the symbol in the fetched list
             for coin in coin_list:
@@ -128,6 +94,13 @@ class CoinGeckoProvider(BaseDataProvider):
             return {}
             
     def _get_market_chart(self, coin_id: str, days: int = 90) -> Dict[str, Any]:
+        # Confirm function is called (inside Docker container)
+        try:
+            with open('/tmp/market_chart_called.log', 'a') as f:
+                import datetime
+                f.write(f"{datetime.datetime.now()} CALLED _get_market_chart for coin_id={coin_id}, days={days}\n")
+        except Exception as log_exc:
+            pass
         print(f"[DEBUG] _get_market_chart called for coin_id={coin_id}, days={days}")
         """Get historical market data for a specific coin
         
@@ -141,31 +114,67 @@ class CoinGeckoProvider(BaseDataProvider):
         try:
             # Get from cache first
             cache_key = f"market_chart_{coin_id}_{days}"
-            if cached_data := self._cache.get(cache_key):
+            cached_data = self._cache.get(cache_key)
+            import datetime
+            def _log_to_file(message):
+                with open('/tmp/coingecko_market_chart_debug.log', 'a') as f:
+                    f.write(f"{datetime.datetime.now()} {message}\n")
+
+            if cached_data:
                 self._logger.debug(f"Using cached market chart for {coin_id}")
+                msg = f"[DEBUG] market_chart (cached) for {coin_id}: keys={list(cached_data.keys()) if isinstance(cached_data, dict) else type(cached_data)}"
+                print(msg)
+                _log_to_file(msg)
+                # Optionally print a sample of the data
+                if isinstance(cached_data, dict):
+                    for k in cached_data:
+                        sample = f"[DEBUG] cached {k}: sample={str(cached_data[k])[:200]}"
+                        print(sample)
+                        _log_to_file(sample)
                 return cached_data
-            
+            else:
+                msg = f"[DEBUG] No cache for market_chart {coin_id}, making real API call..."
+                print(msg)
+                _log_to_file(msg)
             # Fetch from API
             params = {
                 'vs_currency': 'usd',
-                'days': str(days),
-                'interval': 'hourly'
+                'days': str(days)
             }
-            
             response = self._api_requester.make_request(f"coins/{coin_id}/market_chart", params=params)
-            
+            msg = f"[DEBUG] market_chart (API) for {coin_id}: keys={list(response.keys()) if isinstance(response, dict) else type(response)}"
+            print(msg)
+            _log_to_file(msg)
+            if isinstance(response, dict):
+                for k in response:
+                    sample = f"[DEBUG] API {k}: sample={str(response[k])[:200]}"
+                    print(sample)
+                    _log_to_file(sample)
             # Cache the response (1 hour TTL)
             self._cache.set(cache_key, response, ttl=3600)
-            
             return response
             
         except Exception as e:
+            # Log error to file inside Docker container
+            try:
+                with open('/tmp/market_chart_error.log', 'a') as f:
+                    import datetime
+                    f.write(f"{datetime.datetime.now()} ERROR in _get_market_chart for coin_id={coin_id}, days={days}: {str(e)}\n")
+            except Exception as log_exc:
+                pass
             self._logger.error(f"Error getting market chart for {coin_id}: {str(e)}")
             raise APIError(f"Error getting market chart for {coin_id}: {str(e)}")
 
 
 
     def _fetch_data(self, symbol: str) -> Dict[str, Any]:
+        # Confirm function is called (inside Docker container)
+        try:
+            with open('/tmp/fetch_data_called.log', 'a') as f:
+                import datetime
+                f.write(f"{datetime.datetime.now()} CALLED _fetch_data for symbol={symbol}\n")
+        except Exception as log_exc:
+            pass
         """
         Fetch data from CoinGecko API
         
