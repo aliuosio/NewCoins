@@ -3,6 +3,7 @@ Data provider implementations for fetching cryptocurrency data.
 """
 import os
 import logging
+import numbers
 import requests
 import time
 import hashlib
@@ -247,33 +248,22 @@ class CoinGeckoProvider(BaseDataProvider):
                     return 0.0
             price_usd = safe_float(market_data.get('current_price', {}).get('usd', 0), 'price_usd')
             market_cap = safe_float(market_data.get('market_cap', {}).get('usd', 0), 'market_cap')
-            # Calculate total_volume_24h from market_chart if available
-            total_volume_24h = 0
-            if market_chart and 'total_volumes' in market_chart and market_chart['total_volumes']:
-                total_volumes = market_chart['total_volumes']
-                volumes = [safe_float(v[1], 'volumes[]') for v in total_volumes if isinstance(v, list) and len(v) == 2]
-                times = [v[0] for v in total_volumes if isinstance(v, list) and len(v) == 2]
-                if len(volumes) >= 2:
-                    import time
-                    now = times[-1]
-                    ms_24h = 24*60*60*1000
-                    target_time = now - ms_24h
-                    closest_idx = min(range(len(times)), key=lambda i: abs(times[i] - target_time))
-                    total_volume_24h = volumes[-1] - volumes[closest_idx]
-                    if total_volume_24h < 0:
-                        total_volume_24h = 0
-                elif volumes:
-                    total_volume_24h = volumes[-1]
-            # Fallback: If the above fails, try sum of last 24 values
-            if market_chart and 'total_volumes' in market_chart and market_chart['total_volumes']:
-                if (len(volumes) >= 24 and (not total_volume_24h or total_volume_24h <= 0)):
-                    total_volume_24h = sum(volumes[-24:])
-            if total_volume_24h < 0:
-                # print(f"[DEBUG] total_volume_24h negative after all calculations, clamping to zero")
-                total_volume_24h = 0
-            if not total_volume_24h:
-                total_volume_24h = safe_float(market_data.get('total_volume', {}).get('usd', 0), 'total_volume_24h')
-            
+            # Calculate 24h volume from /coins/{id}/market_chart endpoint
+            try:
+                # Use the already-fetched market_chart (1 day)
+                one_day_chart = self._get_market_chart(coin_id, days=1)
+                volumes = one_day_chart.get('total_volumes', [])
+                if volumes:
+                    # Each entry is [timestamp, volume]. Sum all volume values for the period.
+                    total_volume_24h = sum([safe_float(v[1], 'total_volumes') for v in volumes])
+                else:
+                    total_volume_24h = 0.0
+            except Exception as e:
+                self._logger.error(f"Error calculating 24h volume from /coins/{coin_id}/market_chart for {symbol}: {str(e)}")
+                total_volume_24h = 0.0
+            # Placeholder for future: fetch tickers for liquidity analysis
+            # tickers = self._api_requester.make_request(f"coins/{coin_id}/tickers")
+
             # Get community data
             community_data = coin_data.get('community_data', {})
             
