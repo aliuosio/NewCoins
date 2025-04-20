@@ -175,12 +175,14 @@ class CoinGeckoProvider(BaseDataProvider):
         # Print working directory and forced test write to confirm file access
         import os
         # print(f"[RAW-API-DEBUG] Current working directory: {os.getcwd()}")
-        try:
-            with open('/src/raw_api_debug.txt', 'a') as f:
-                f.write(f"TEST-WRITE: _fetch_data called for {symbol}\n")
-        except Exception as e:
-            # print(f"[RAW-API-DEBUG][ERROR] Could not write test entry: {e}")
-            pass
+        # Only write debug info if verbose flag is set
+        if getattr(self, '_verbose', False):
+            try:
+                with open('/src/raw_api_debug.txt', 'a') as f:
+                    f.write(f"TEST-WRITE: _fetch_data called for {symbol}\n")
+            except Exception as e:
+                # print(f"[RAW-API-DEBUG][ERROR] Could not write test entry: {e}")
+                pass
         # Confirm function is called (inside Docker container)
         try:
             with open('/tmp/fetch_data_called.log', 'a') as f:
