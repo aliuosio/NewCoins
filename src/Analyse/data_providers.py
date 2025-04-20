@@ -34,7 +34,7 @@ class CoinGeckoProvider(BaseDataProvider):
         super().__init__("coingecko", cache, rate_limiter, api_requester)
 
     def _get_coin_id(self, symbol: str) -> Optional[str]:
-        print(f"[DEBUG] _get_coin_id called with symbol={symbol}")
+        # print(f"[DEBUG] _get_coin_id called with symbol={symbol}")
         """Get CoinGecko coin ID from symbol"""
         # Normalize symbol
         symbol = symbol.upper()
@@ -50,20 +50,20 @@ class CoinGeckoProvider(BaseDataProvider):
             # Look for the symbol in the fetched list
             for coin in coin_list:
                 if coin['symbol'].lower() == symbol.lower():
-                    print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
+                    # print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
                     return coin['id']
             
             # Look for the symbol in the fetched list
             for coin in coin_list:
                 if coin['symbol'].lower() == symbol.lower():
-                    print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
+                    # print(f"[DEBUG] _get_coin_id found in API: {symbol} -> {coin['id']}")
                     return coin['id']
-            print(f"[DEBUG] _get_coin_id NOT FOUND for symbol={symbol}")
+            # print(f"[DEBUG] _get_coin_id NOT FOUND for symbol={symbol}")
             return None
             
         except Exception as e:
             self._logger.error(f"Error fetching coin list for {symbol}: {str(e)}")
-            print(f"[DEBUG] _get_coin_id exception for symbol={symbol}: {e}")
+            # print(f"[DEBUG] _get_coin_id exception for symbol={symbol}: {e}")
             return None
 
 
@@ -101,7 +101,7 @@ class CoinGeckoProvider(BaseDataProvider):
                 f.write(f"{datetime.datetime.now()} CALLED _get_market_chart for coin_id={coin_id}, days={days}\n")
         except Exception as log_exc:
             pass
-        print(f"[DEBUG] _get_market_chart called for coin_id={coin_id}, days={days}")
+        # print(f"[DEBUG] _get_market_chart called for coin_id={coin_id}, days={days}")
         """Get historical market data for a specific coin
         
         Args:
@@ -121,20 +121,20 @@ class CoinGeckoProvider(BaseDataProvider):
                     f.write(f"{datetime.datetime.now()} {message}\n")
 
             if cached_data:
-                self._logger.debug(f"Using cached market chart for {coin_id}")
+                # self._logger.debug(f"Using cached market chart for {coin_id}")
                 msg = f"[DEBUG] market_chart (cached) for {coin_id}: keys={list(cached_data.keys()) if isinstance(cached_data, dict) else type(cached_data)}"
-                print(msg)
+                # print(msg)
                 _log_to_file(msg)
                 # Optionally print a sample of the data
                 if isinstance(cached_data, dict):
                     for k in cached_data:
                         sample = f"[DEBUG] cached {k}: sample={str(cached_data[k])[:200]}"
-                        print(sample)
+                        # print(sample)
                         _log_to_file(sample)
                 return cached_data
             else:
                 msg = f"[DEBUG] No cache for market_chart {coin_id}, making real API call..."
-                print(msg)
+                # print(msg)
                 _log_to_file(msg)
             # Fetch from API
             params = {
@@ -143,31 +143,43 @@ class CoinGeckoProvider(BaseDataProvider):
             }
             response = self._api_requester.make_request(f"coins/{coin_id}/market_chart", params=params)
             msg = f"[DEBUG] market_chart (API) for {coin_id}: keys={list(response.keys()) if isinstance(response, dict) else type(response)}"
-            print(msg)
+            # print(msg)
             _log_to_file(msg)
             if isinstance(response, dict):
                 for k in response:
                     sample = f"[DEBUG] API {k}: sample={str(response[k])[:200]}"
-                    print(sample)
+                    # print(sample)
                     _log_to_file(sample)
             # Cache the response (1 hour TTL)
             self._cache.set(cache_key, response, ttl=3600)
             return response
             
         except Exception as e:
+            import traceback
             # Log error to file inside Docker container
             try:
                 with open('/tmp/market_chart_error.log', 'a') as f:
                     import datetime
                     f.write(f"{datetime.datetime.now()} ERROR in _get_market_chart for coin_id={coin_id}, days={days}: {str(e)}\n")
+                    f.write(traceback.format_exc() + "\n")
             except Exception as log_exc:
                 pass
             self._logger.error(f"Error getting market chart for {coin_id}: {str(e)}")
+            self._logger.error(traceback.format_exc())
             raise APIError(f"Error getting market chart for {coin_id}: {str(e)}")
 
 
 
     def _fetch_data(self, symbol: str) -> Dict[str, Any]:
+        # Print working directory and forced test write to confirm file access
+        import os
+        # print(f"[RAW-API-DEBUG] Current working directory: {os.getcwd()}")
+        try:
+            with open('/src/raw_api_debug.txt', 'a') as f:
+                f.write(f"TEST-WRITE: _fetch_data called for {symbol}\n")
+        except Exception as e:
+            # print(f"[RAW-API-DEBUG][ERROR] Could not write test entry: {e}")
+            pass
         # Confirm function is called (inside Docker container)
         try:
             with open('/tmp/fetch_data_called.log', 'a') as f:
@@ -206,7 +218,7 @@ class CoinGeckoProvider(BaseDataProvider):
             cached_data = self._cache.get(cache_key)
             
             if cached_data:
-                self._logger.debug(f"Using cached comprehensive data for {symbol}")
+                # self._logger.debug(f"Using cached comprehensive data for {symbol}")
                 return cached_data
             
             # Get comprehensive coin data
@@ -217,28 +229,50 @@ class CoinGeckoProvider(BaseDataProvider):
             
             # Extract relevant data
             market_data = coin_data.get('market_data', {})
-            
+
             # Ensure market chart data is properly included in the returned structure
             if market_chart:
                 coin_data['market_chart'] = market_chart
-            price_usd = market_data.get('current_price', {}).get('usd', 0)
-            market_cap = market_data.get('market_cap', {}).get('usd', 0)
+
+            def safe_float(val, name):
+                if isinstance(val, numbers.Real):
+                    return float(val)
+                elif isinstance(val, complex):
+                    # print(f"[DEBUG][CoinGeckoProvider] {name} is complex ({val}), using real part only.")
+                    return float(val.real)
+                try:
+                    return float(val)
+                except Exception as e:
+                    # print(f"[DEBUG][CoinGeckoProvider] Could not convert {name}={val} to float: {e}")
+                    return 0.0
+            price_usd = safe_float(market_data.get('current_price', {}).get('usd', 0), 'price_usd')
+            market_cap = safe_float(market_data.get('market_cap', {}).get('usd', 0), 'market_cap')
             # Calculate total_volume_24h from market_chart if available
             total_volume_24h = 0
             if market_chart and 'total_volumes' in market_chart and market_chart['total_volumes']:
-                # CoinGecko returns [ [timestamp, volume], ... ]
-                volumes = [v[1] for v in market_chart['total_volumes'] if isinstance(v, list) and len(v) == 2]
+                total_volumes = market_chart['total_volumes']
+                volumes = [safe_float(v[1], 'volumes[]') for v in total_volumes if isinstance(v, list) and len(v) == 2]
+                times = [v[0] for v in total_volumes if isinstance(v, list) and len(v) == 2]
                 if len(volumes) >= 2:
-                    total_volume_24h = volumes[-1] - volumes[0]
+                    import time
+                    now = times[-1]
+                    ms_24h = 24*60*60*1000
+                    target_time = now - ms_24h
+                    closest_idx = min(range(len(times)), key=lambda i: abs(times[i] - target_time))
+                    total_volume_24h = volumes[-1] - volumes[closest_idx]
+                    if total_volume_24h < 0:
+                        total_volume_24h = 0
                 elif volumes:
                     total_volume_24h = volumes[-1]
-            print(f"market_chart['total_volumes']: {market_chart.get('total_volumes', None)}")
-            print(f"Calculated total_volume_24h: {total_volume_24h}")
-            if self._logger:
-                self._logger.debug(f"market_chart['total_volumes']: {market_chart.get('total_volumes', None)}")
-                self._logger.debug(f"Calculated total_volume_24h: {total_volume_24h}")
+            # Fallback: If the above fails, try sum of last 24 values
+            if market_chart and 'total_volumes' in market_chart and market_chart['total_volumes']:
+                if (len(volumes) >= 24 and (not total_volume_24h or total_volume_24h <= 0)):
+                    total_volume_24h = sum(volumes[-24:])
+            if total_volume_24h < 0:
+                # print(f"[DEBUG] total_volume_24h negative after all calculations, clamping to zero")
+                total_volume_24h = 0
             if not total_volume_24h:
-                total_volume_24h = market_data.get('total_volume', {}).get('usd', 0)
+                total_volume_24h = safe_float(market_data.get('total_volume', {}).get('usd', 0), 'total_volume_24h')
             
             # Get community data
             community_data = coin_data.get('community_data', {})

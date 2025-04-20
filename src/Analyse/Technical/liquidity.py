@@ -29,74 +29,37 @@ class LiquidityIndicator(BaseIndicator):
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Calculate the liquidity score based on bid/ask spread and market depth
-        with enhanced analysis of volatility-adjusted spread and market impact
-        
-        Args:
-            symbol: Symbol of the cryptocurrency
-            data: Data retrieved from the data provider
-            
-        Returns:
-            Dictionary with calculation results
+        Calculate the liquidity score based solely on 24h trading volume.
+        Awards up to 15 points for having at least $1M in 24h trading volume.
         """
-        # Extract data
-        spread = data.get('spread', 0.01)  # Default to 1% if not available
-        market_cap = data.get('market_cap', 0)
-        total_volume = data.get('total_volume_24h', 0)
-        prices = data.get('prices', [])
-        current_price = data.get('price_usd', 0)
-        
-        # Calculate volatility-adjusted spread
-        volatility = self._calculate_volatility(prices)
-        vol_adjusted_spread = spread
-        if volatility > 0:
-            vol_adjusted_spread = spread / volatility
-        
-        # Calculate market impact (how much $1M would move the price)
-        market_impact = self._estimate_market_impact(total_volume, current_price)
-        
-        # Calculate spread score (0-15 points)
-        # If spread is <= 0.5%, get full points
-        # If spread is > 0.5%, score decreases linearly
-        if vol_adjusted_spread <= self._target_spread:
-            spread_score = self.max_score
+        import numbers
+        def safe_float(val, name):
+            if isinstance(val, numbers.Real):
+                return float(val)
+            elif isinstance(val, complex):
+                print(f"[DEBUG][LiquidityIndicator] {name} is complex ({val}), using real part only.")
+                return float(val.real)
+            try:
+                return float(val)
+            except Exception as e:
+                print(f"[DEBUG][LiquidityIndicator] Could not convert {name}={val} to float: {e}")
+                return 0.0
+        total_volume = safe_float(data.get('total_volume_24h', 0), 'total_volume_24h')
+        target_volume = 1_000_000  # $1M USD
+        if total_volume >= target_volume:
+            score = self.max_score
         else:
-            # More gradual decline for volatility-adjusted spread
-            spread_score = max(0, self.max_score * (1 - (vol_adjusted_spread - self._target_spread) / (self._target_spread * 3)))
-        
-        # Calculate depth score (0-15 points) with market impact consideration
-        # Lower market impact = higher score
-        impact_score = max(0, self.max_score * (1 - market_impact / self._market_impact_threshold))
-        
-        # Traditional depth score using market cap and volume
-        traditional_depth_score = min(
-            self.max_score, 
-            self.max_score * (1 - 1 / (1 + (market_cap + total_volume) / 100000000))
-        )
-        
-        # Combine traditional depth score with impact score
-        depth_score = 0.7 * traditional_depth_score + 0.3 * impact_score
-        
-        # Combine scores with different weights
-        # Spread is more important than depth
-        final_score = 0.7 * spread_score + 0.3 * depth_score
-        
-        # Round the score
-        rounded_score = round(final_score, 2)
-        
-        # Return result with details
+            score = (total_volume / target_volume) * self.max_score
+        score = max(0.0, min(self.max_score, score))
+        warning = None
+        if not total_volume:
+            warning = 'WARNING: No 24h volume data available from API. Liquidity score may be invalid.'
         return {
-            'score': rounded_score,
+            'score': round(score, 2),
             'details': {
-                'spread': spread,
-                'volatility': round(volatility, 4) if volatility else None,
-                'volatility_adjusted_spread': round(vol_adjusted_spread, 4),
-                'market_impact': f"{round(market_impact * 100, 2)}%" if market_impact else None,
-                'spread_score': round(spread_score, 2),
-                'market_cap': market_cap,
-                'total_volume': total_volume,
-                'depth_score': round(depth_score, 2),
-                'target_spread': self._target_spread
+                'total_volume_24h': total_volume,
+                'target_volume': target_volume,
+                'warning': warning
             }
         }
         
