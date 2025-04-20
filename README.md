@@ -36,6 +36,24 @@ python main.py analyze BTC --verbose
 python -m Scheduler.main
 ```
 
+### Fetch and persist new coins (MEXC):
+
+Fetch new coins scheduled to launch on MEXC within a specified time window (default: next 24 hours). Results are saved to the database.
+
+```bash
+python -m NewCoins.main [hours]
+```
+- `[hours]` (optional): Positive for next hours, negative for past hours (default: 24)
+- Requires the `MEXC_HTTP_URL` environment variable set in your `.env` file
+
+**Example:**
+```bash
+ 24    # Next 24 hours
+python -m NewCoins.main -12   # Past 12 hours
+```
+
+The script will output the number of coins found and persist them to the database.
+
 ## Features & Indicators
 
 ### Technical Indicators (70 points)
@@ -57,3 +75,4 @@ Based on total score percentage:
 - **HOLD** (≥40%): Moderate potential
 - **WATCH** (≥30%): Some concerns
 - **AVOID** (≥20%): Significant concerns
+python -m NewCoins.main
