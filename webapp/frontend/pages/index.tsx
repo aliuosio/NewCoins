@@ -81,14 +81,14 @@ export default function Home() {
         let social = (data.social || []).filter(i => SOCIAL_LABELS.includes(i.name));
         social = SOCIAL_LABELS.map(label => social.find(i => i.name === label) || { name: label, value: 0 });
         setSocialIndicators(social);
-        // Compute total score as percent
+        // Use backend-computed score_percentage if available, else fall back to local calculation
         const techScore = technical.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
         const techMax = technical.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
         const socScore = social.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
         const socMax = social.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
         const total = techScore + socScore;
         const totalMax = techMax + socMax;
-        const percent = totalMax > 0 ? (100 * total / totalMax) : 0;
+        const percent = typeof data.score_percentage === 'number' ? data.score_percentage : (totalMax > 0 ? (100 * total / totalMax) : 0);
         setTotalScore(percent);
         // Recommendation logic from .env and backend
         let rec = '', desc = '';

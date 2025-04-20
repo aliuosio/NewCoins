@@ -23,7 +23,8 @@ def get_indicators(token: str = Query(..., alias="token")):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT trading_volume_score, liquidity_score, whale_transactions_score, token_distribution_score, pre_sale_vesting_score, smart_contract_audit_score,
-                       social_volume_score, sentiment_analysis_score, developer_activity_score, community_growth_score
+                       social_volume_score, sentiment_analysis_score, developer_activity_score, community_growth_score,
+                       total_social_score, total_technical_score, total_score, score_percentage
                 FROM analysis_summary
                 WHERE symbol = %s
             """, (token,))
@@ -43,6 +44,8 @@ def get_indicators(token: str = Query(..., alias="token")):
                 {"name": "Sentiment Analysis", "value": float(row[7]) if row[7] is not None else 0, "max": 10},
                 {"name": "Developer Activity", "value": float(row[8]) if row[8] is not None else 0, "max": 10},
             ]
-            return {"technical": technical, "social": social}
+            score_percentage = float(row[13]) if row[13] is not None else None
+            total_score = float(row[12]) if row[12] is not None else None
+            return {"technical": technical, "social": social, "score_percentage": score_percentage, "total_score": total_score}
     finally:
         conn.close()
