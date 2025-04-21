@@ -4,26 +4,46 @@ Database connection and persistence utilities for PumpAndDump app.
 """
 import os
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import execute_values
 import pytz
 from datetime import datetime
 from pathlib import Path
+import threading
 
 from utils.db_config import get_db_config
 
+# Connection pool settings
+POOL_MINCONN = int(os.getenv("PG_POOL_MINCONN", 1))
+POOL_MAXCONN = int(os.getenv("PG_POOL_MAXCONN", 10))
+
+# Global connection pool instance (thread-safe)
+_connection_pool = None
+_pool_lock = threading.Lock()
+
+def get_connection_pool():
+    global _connection_pool
+    if _connection_pool is None:
+        with _pool_lock:
+            if _connection_pool is None:
+                _connection_pool = pool.ThreadedConnectionPool(
+                    POOL_MINCONN, POOL_MAXCONN, **get_db_config()
+                )
+    return _connection_pool
+
 class DBConnection:
     def __init__(self):
-        # Use the correct database credentials from .env
         self._conn = None
 
     def __enter__(self):
-        self._conn = psycopg2.connect(**get_db_config())
+        self._conn = get_connection_pool().getconn()
         return self._conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._conn:
             self._conn.commit()
-            self._conn.close()
+            get_connection_pool().putconn(self._conn)
+            self._conn = None
 
 def create_tables():
     """
