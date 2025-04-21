@@ -306,6 +306,16 @@ class CoinGeckoProvider(BaseDataProvider):
             # Get community data
             community_data = coin_data.get('community_data', {})
             
+            # Fetch vesting and audit data (if implemented)
+            try:
+                vesting_data = self.get_vesting_data(coin_id)
+            except Exception:
+                vesting_data = None
+            try:
+                audit_data = self.get_audit_data(coin_id)
+            except Exception:
+                audit_data = None
+
             # Create result
             result = {
                 'symbol': symbol,
@@ -314,7 +324,9 @@ class CoinGeckoProvider(BaseDataProvider):
                 'market_cap': market_cap,
                 'total_volume_24h': total_volume_24h,
                 'market_chart': market_chart,
-                'community_data': community_data
+                'community_data': community_data,
+                'vesting_data': vesting_data,
+                'audit_data': audit_data
             }
             
             # Cache the comprehensive data
