@@ -44,7 +44,7 @@ class DeveloperActivityIndicator(BaseIndicator):
         
         # Initialize GitHub client
         # Get API key from environment variables
-        github_api_key = os.environ.get('GITHUB_API_KEY')
+        github_api_key = os.getenv('GITHUB_API_KEY')
         
         # Create GitHub client
         self.github_client = GitHubClient(

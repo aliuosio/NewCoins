@@ -9,12 +9,10 @@ import sys
 from .implementations import RequestsHTTPClient
 from typing import Any, List
 import os
-from dotenv import load_dotenv
 import time
 from utils.db import insert_new_coins, create_tables
 import argparse
 
-load_dotenv()
 
 @dataclass
 class NewCoin:

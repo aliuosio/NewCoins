@@ -42,9 +42,9 @@ class CommunityGrowthIndicator(BaseIndicator):
         
         # Initialize social metrics client
         # Get API keys from environment variables
-        twitter_bearer_token = os.environ.get('TWITTER_BEARER_TOKEN')
-        reddit_client_id = os.environ.get('REDDIT_CLIENT_ID')
-        reddit_client_secret = os.environ.get('REDDIT_CLIENT_SECRET')
+        twitter_bearer_token = os.getenv('TWITTER_BEARER_TOKEN')
+        reddit_client_id = os.getenv('REDDIT_CLIENT_ID')
+        reddit_client_secret = os.getenv('REDDIT_CLIENT_SECRET')
         
         # Create social metrics client
         self.social_metrics_client = SocialMetricsClient(

@@ -9,14 +9,12 @@ This module contains indicators that evaluate social metrics such as:
 - Google search trends (using pytrends or simulated)
 """
 
-# from .social_volume import SocialVolumeIndicator # Removed
 from .sentiment_analysis import SentimentAnalysisIndicator
 from .developer_activity import DeveloperActivityIndicator
 from .community_growth import CommunityGrowthIndicator # Added
 from .google_trends import GoogleTrendsIndicator     # Added
 
 __all__ = [
-    # 'SocialVolumeIndicator', # Removed
     'SentimentAnalysisIndicator',
     'DeveloperActivityIndicator',
     'CommunityGrowthIndicator', # Added

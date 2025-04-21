@@ -41,10 +41,10 @@ def load_environment_variables():
         return False
     
     # Check if API keys are set
-    github_api_key = os.environ.get('GITHUB_API_KEY')
-    twitter_bearer_token = os.environ.get('TWITTER_BEARER_TOKEN')
-    reddit_client_id = os.environ.get('REDDIT_CLIENT_ID')
-    reddit_client_secret = os.environ.get('REDDIT_CLIENT_SECRET')
+    github_api_key = os.getenv('GITHUB_API_KEY')
+    twitter_bearer_token = os.getenv('TWITTER_BEARER_TOKEN')
+    reddit_client_id = os.getenv('REDDIT_CLIENT_ID')
+    reddit_client_secret = os.getenv('REDDIT_CLIENT_SECRET')
     
     # Log which API keys are available
     if github_api_key:

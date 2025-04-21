@@ -5,7 +5,6 @@ Initialize the database and create necessary tables for the PumpAndDump applicat
 import os
 import logging
 from pathlib import Path
-from dotenv import load_dotenv
 
 from db import create_tables, DBConnection
 from analysis_db import create_analysis_table
@@ -20,7 +19,6 @@ logger = logging.getLogger("init_db")
 def init_database():
     """Initialize the database and create all necessary tables."""
     # Load environment variables
-    load_dotenv()
     
     # Check database connection
     try:
