@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import parser from 'cron-parser';
-import { DateTime } from 'luxon';
+import { IndicatorList, Indicator } from '../components/IndicatorList';
+import { formatCronjobDate } from '../utils/formatCronjobDate';
 
 export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
@@ -27,18 +27,18 @@ export default function Home() {
     'Developer Activity',
   ];
 
-  const [technicalIndicators, setTechnicalIndicators] = useState([
-    { name: 'Trading Volume', value: 0 },
-    { name: 'Liquidity', value: 0 },
-    { name: 'Whale Transactions', value: 0 },
-    { name: 'Token Distribution', value: 0 },
-    { name: 'Pre-Sale Vesting', value: 0 },
-    { name: 'Smart Contract Audit', value: 0 },
+  const [technicalIndicators, setTechnicalIndicators] = useState<Indicator[]>([
+    { name: 'Trading Volume', value: 0, max: 0 },
+    { name: 'Liquidity', value: 0, max: 0 },
+    { name: 'Whale Transactions', value: 0, max: 0 },
+    { name: 'Token Distribution', value: 0, max: 0 },
+    { name: 'Pre-Sale Vesting', value: 0, max: 0 },
+    { name: 'Smart Contract Audit', value: 0, max: 0 },
   ]);
-  const [socialIndicators, setSocialIndicators] = useState([
-    { name: 'Social Volume', value: 0 },
-    { name: 'Sentiment Analysis', value: 0 },
-    { name: 'Developer Activity', value: 0 },
+  const [socialIndicators, setSocialIndicators] = useState<Indicator[]>([
+    { name: 'Social Volume', value: 0, max: 0 },
+    { name: 'Sentiment Analysis', value: 0, max: 0 },
+    { name: 'Developer Activity', value: 0, max: 0 },
   ]);
   const [totalScore, setTotalScore] = useState(0);
   const [recommendation, setRecommendation] = useState('');
@@ -75,12 +75,12 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
         // Filter and order technical indicators
-        let technical = (data.technical || []).filter(i => TECHNICAL_LABELS.includes(i.name));
-        technical = TECHNICAL_LABELS.map(label => technical.find(i => i.name === label) || { name: label, value: 0 });
+        let technical = (data.technical || []).filter((i: Indicator) => TECHNICAL_LABELS.includes(i.name));
+        technical = TECHNICAL_LABELS.map(label => technical.find((i: Indicator) => i.name === label) || { name: label, value: 0, max: 0 });
         setTechnicalIndicators(technical);
         // Filter and order social indicators
-        let social = (data.social || []).filter(i => SOCIAL_LABELS.includes(i.name));
-        social = SOCIAL_LABELS.map(label => social.find(i => i.name === label) || { name: label, value: 0 });
+        let social = (data.social || []).filter((i: Indicator) => SOCIAL_LABELS.includes(i.name));
+        social = SOCIAL_LABELS.map(label => social.find((i: Indicator) => i.name === label) || { name: label, value: 0, max: 0 });
         setSocialIndicators(social);
         // Use backend-computed score_percentage if available, else fall back to local calculation
         const techScore = technical.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
@@ -120,7 +120,7 @@ export default function Home() {
   return (
     <>
       <div className="min-h-screen flex items-center justify-center bg-[#121212] font-inter px-2 sm:px-4">
-        <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] shadow-lg">
+        <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] mx-auto shadow-lg">
           {/* Header */}
           {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
           <div className="flex flex-row items-center justify-between w-full mb-4 lg:mb-8 gap-4">
@@ -196,37 +196,7 @@ export default function Home() {
                 })()}</span>
               </div>
               <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-6">
-                <div className="space-y-3">
-                  {loading ? (
-                    <div className="text-center text-[#FF6A00] py-4">Loading...</div>
-                  ) : (
-                    <>
-                      {technicalIndicators.map((indicator, idx) => (
-                        <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                          <span className="flex items-center gap-2">
-                            {indicator.name === 'Trading Volume' && <span>📊</span>}
-                            {indicator.name === 'Liquidity' && <span>💧</span>}
-                            {indicator.name === 'Whale Transactions' && <span>🐳</span>}
-                            {indicator.name === 'Token Distribution' && <span>📈</span>}
-                            {indicator.name === 'Pre-Sale Vesting' && <span>📆</span>}
-                            {indicator.name === 'Smart Contract Audit' && <span>📝</span>}
-                            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
-                          </span>
-                          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
-                            <div className="flex items-center gap-2 w-full">
-                              <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
-                                  {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
-                                  <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
+                <IndicatorList indicators={technicalIndicators} loading={loading} />
               </div>
             </div>
             {/* Social */}
@@ -240,34 +210,7 @@ export default function Home() {
                 })()}</span>
               </div>
               <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-4">
-                <div className="space-y-3">
-                  {loading ? (
-                    <div className="text-center text-[#FF6A00] py-4">Loading...</div>
-                  ) : (
-                    <>
-                      {socialIndicators.map((indicator, idx) => (
-                        <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-                          <span className="flex items-center gap-2">
-                            {indicator.name === 'Social Volume' && <span>👥</span>}
-                            {indicator.name === 'Sentiment Analysis' && <span>😊</span>}
-                            {indicator.name === 'Developer Activity' && <span>📈</span>}
-                            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
-                          </span>
-                          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
-                            <div className="flex items-center gap-2 w-full">
-                              <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
-                                  {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
-                                  <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
+                <IndicatorList indicators={socialIndicators} loading={loading} />
               </div>
             </div>
           </div>
@@ -319,33 +262,7 @@ export default function Home() {
                       .map(job => (
                       <li key={job.id} className="flex justify-between items-center bg-[#292929] rounded-lg px-4 py-2">
                         <span className="text-[#2DE282] font-semibold w-1/3 text-base sm:text-lg">
-                          {(() => {
-                            // Custom cron to CET/CEST converter
-                            try {
-                              const parts = job.schedule.split(' ');
-                              if (parts.length < 5) throw new Error('Invalid cron format');
-                              const [min, hour, day, month] = parts;
-                              const utcDate = new Date(Date.UTC(
-                                new Date().getFullYear(), // Use current year
-                                parseInt(month) - 1,
-                                parseInt(day),
-                                parseInt(hour),
-                                parseInt(min)
-                              ));
-                              const formatter = new Intl.DateTimeFormat('de-DE', {
-                                timeZone: 'Europe/Berlin',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false,
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              });
-                              return formatter.format(utcDate) + ' CET';
-                            } catch (e) {
-                              return job.schedule;
-                            }
-                          })()}
+                          {formatCronjobDate(job.schedule)}
                         </span>
                         <span className="text-white break-all w-2/3 text-center text-base sm:text-lg">{job.command.replace('/usr/bin/python -m', '').replace('Trade.main', '').trim()}</span>
                       </li>
