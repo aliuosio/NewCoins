@@ -7,11 +7,11 @@ cd "$(dirname "$0")"
 docker compose up -d
 
 # Wait 30 seconds for containers to be ready (countdown)
-for i in {40..1}; do
+for i in {45..1}; do
   printf "\rWaiting for Python Dependencies to load: %2d seconds remaining..." "$i"
   sleep 1
 done
 printf "\rContainers should be ready!                   \n"
 
 # Run the scheduler inside the python container
-docker compose exec python python -m Scheduler.main
+docker compose exec python python Scheduler/main.py

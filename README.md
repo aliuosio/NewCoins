@@ -33,7 +33,7 @@ python main.py analyze BTC --verbose
 ### Run the Scheduler:
 
 ```bash
-python -m Scheduler.main
+python Scheduler/main.py
 ```
 
 ### Fetch and persist new coins (MEXC):
@@ -75,4 +75,3 @@ Based on total score percentage:
 - **HOLD** (≥40%): Moderate potential
 - **WATCH** (≥30%): Some concerns
 - **AVOID** (≥20%): Significant concerns
-python -m NewCoins.main

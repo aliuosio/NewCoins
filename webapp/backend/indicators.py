@@ -2,23 +2,14 @@ from fastapi import APIRouter, Query
 import os
 import psycopg2
 
+from src.utils.db_config import get_db_config
+
 router = APIRouter()
 
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "pad")
-DB_USER = os.getenv("POSTGRES_USER", "SpecialOsio")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "oeh_ahb6Ahzah7exeish")
 
 @router.get("/api/indicators")
 def get_indicators(token: str = Query(..., alias="token")):
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
+    conn = psycopg2.connect(**get_db_config())
     try:
         with conn.cursor() as cur:
             cur.execute("""
