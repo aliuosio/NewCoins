@@ -127,7 +127,7 @@ export default function Home() {
             <div className="flex flex-col items-start w-[220px] gap-2">
               <div className="relative w-full max-w-[220px]">
                 <button
-                  className="w-full bg-[#242424] text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-[#FF6A00] transition-colors"
+                  className="w-full bg-[#242424] text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
                   onClick={() => setShowDropdown(d => !d)}
                   type="button"
                   style={{ minHeight: '44px' }}
@@ -140,7 +140,7 @@ export default function Home() {
                     {analysedCoins.map(symbol => (
                       <div
                         key={symbol}
-                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00] font-bold' : 'text-[#FF6A00] hover:bg-[#222]'}`}
+                        className={`dropdown-menu-item px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00] font-bold' : 'text-[#FF6A00]'}`}
                         style={{ minHeight: '40px' }}
                         onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
                       >
