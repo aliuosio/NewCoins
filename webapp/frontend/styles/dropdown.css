@@ -1,0 +1,23 @@
+/* Dropdown container background */
+.coin-dropdown-menu {
+  background: #242424 !important;
+}
+
+/* Dropdown coin item base style */
+.coin-dropdown-item {
+  background: #121212 !important;
+  color: #2DE282 !important;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* Optional: subtle highlight on hover */
+.coin-dropdown-item:hover {
+  background: #232323 !important;
+  color: #2DE282 !important;
+}
+
+.coin-dropdown-item.selected {
+  background: #333 !important;
+  color: #FF6A00 !important;
+  font-weight: bold;
+}
