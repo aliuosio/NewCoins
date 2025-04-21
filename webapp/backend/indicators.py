@@ -1,16 +1,11 @@
 from fastapi import APIRouter, Query
-import os
-import psycopg2
-
-from src.utils.db_config import get_db_config
+from src.utils.db import DBConnection
 
 router = APIRouter()
 
-
 @router.get("/api/indicators")
 def get_indicators(token: str = Query(..., alias="token")):
-    conn = psycopg2.connect(**get_db_config())
-    try:
+    with DBConnection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT trading_volume_score, liquidity_score, whale_transactions_score, token_distribution_score, pre_sale_vesting_score, smart_contract_audit_score,
@@ -38,5 +33,3 @@ def get_indicators(token: str = Query(..., alias="token")):
             score_percentage = float(row[13]) if row[13] is not None else None
             total_score = float(row[12]) if row[12] is not None else None
             return {"technical": technical, "social": social, "score_percentage": score_percentage, "total_score": total_score}
-    finally:
-        conn.close()

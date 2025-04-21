@@ -1,18 +1,10 @@
 import subprocess
-import psycopg2
+from utils.db import DBConnection
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List
 from interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
 
-# Load environment variables from .env automatically
-try:
-    from dotenv import load_dotenv
-    load_dotenv(dotenv_path='/.env')  # Explicit path for Docker compatibility
-except ImportError:
-    pass  # If dotenv is not installed, skip (but recommend installing for local dev)
-
-from utils.db_config import get_db_config
 ANALYSIS_VIEW = 'analysis_summary'
 
 class DefaultCoinFetcher:
@@ -22,36 +14,32 @@ class DefaultCoinFetcher:
 
 class PostgresCoinRepository:
     def get_new_symbols(self) -> List[str]:
-        conn = psycopg2.connect(**get_db_config())
-        cur = conn.cursor()
-        since = datetime.now(timezone.utc) - timedelta(hours=24)
-        cur.execute(
-            f"SELECT symbol FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s",
-            (since,)
-        )
-        coins = [row[0] for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        print(f"[Scheduler] Found new coins: {coins}")
-        return coins
+        with DBConnection() as conn:
+            with conn.cursor() as cur:
+                since = datetime.now(timezone.utc) - timedelta(hours=24)
+                cur.execute(
+                    f"SELECT symbol FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s",
+                    (since,)
+                )
+                coins = [row[0] for row in cur.fetchall()]
+            print(f"[Scheduler] Found new coins: {coins}")
+            return coins
 
     def get_new_symbols_with_time(self) -> List[tuple]:
         """
         Returns a list of (symbol, time_start) tuples for new coins scheduled to launch in the next 24 hours.
         """
-        conn = psycopg2.connect(**get_db_config())
-        cur = conn.cursor()
-        now = datetime.now(timezone.utc)
-        next_24h = now + timedelta(hours=24)
-        cur.execute(
-            f"SELECT symbol, time_start FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s AND time_start <= %s",
-            (now, next_24h)
-        )
-        coins = [(row[0], row[1]) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        print(f"[Scheduler] Found new coins with times (next 24h): {coins}")
-        return coins
+        with DBConnection() as conn:
+            with conn.cursor() as cur:
+                now = datetime.now(timezone.utc)
+                next_24h = now + timedelta(hours=24)
+                cur.execute(
+                    f"SELECT symbol, time_start FROM {os.getenv('POSTGRES_TABLE', 'coins')} WHERE time_start >= %s AND time_start <= %s",
+                    (now, next_24h)
+                )
+                coins = [(row[0], row[1]) for row in cur.fetchall()]
+            print(f"[Scheduler] Found new coins with times (next 24h): {coins}")
+            return coins
 
 
 class DefaultCoinAnalyzer:
@@ -71,14 +59,12 @@ class PostgresRecommendationService:
             threshold = float(threshold_env) if threshold_env is not None else 70.0
         except ValueError:
             threshold = 70.0
-        conn = psycopg2.connect(**get_db_config())
-        cur = conn.cursor()
-        cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE FLOOR(score_percentage) >= %s", (threshold,))
-        coins = [row[0] for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        print(f"[Scheduler] Qualified coins for trading (score >= {threshold}): {coins}")
-        return coins
+        with DBConnection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE FLOOR(score_percentage) >= %s", (threshold,))
+                coins = [row[0] for row in cur.fetchall()]
+            print(f"[Scheduler] Qualified coins for trading (score >= {threshold}): {coins}")
+            return coins
 
 import subprocess
 
