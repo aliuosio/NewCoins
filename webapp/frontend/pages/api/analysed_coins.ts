@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const backendUrl = process.env.BACKEND_URL_ANALYSED || 'http://pad_webapp_backend:8000/api/analysed_coins';
+  const backendUrl = process.env.BACKEND_URL_ANALYSED || 'http://nc_webapp_backend:8000/api/analysed_coins';
   try {
     const response = await fetch(backendUrl);
     if (!response.ok) {

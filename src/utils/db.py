@@ -9,25 +9,15 @@ import pytz
 from datetime import datetime
 from pathlib import Path
 
+from utils.db_config import get_db_config
+
 class DBConnection:
     def __init__(self):
         # Use the correct database credentials from .env
-        self.host = "postgres"  # Docker service name
-        self.port = "5432"
-        self.db = "pad"  # From .env
-        self.user = "SpecialOsio"  # From .env
-        self.password = "oeh_ahb6Ahzah7exeish"  # From .env
-        self.table = "coins"  # Default table name
         self._conn = None
 
     def __enter__(self):
-        self._conn = psycopg2.connect(
-            host=self.host,
-            port=self.port,
-            dbname=self.db,
-            user=self.user,
-            password=self.password
-        )
+        self._conn = psycopg2.connect(**get_db_config())
         return self._conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):

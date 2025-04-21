@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { token } = req.query;
-  const backendUrl = `http://pad_webapp_backend:8000/api/indicators?token=${encodeURIComponent(token as string)}`;
+  const backendUrl = (process.env.BACKEND_URL_INDICATORS || 'http://nc_webapp_backend:8000/api/indicators') + `?token=${encodeURIComponent(token as string)}`;
   try {
     const response = await fetch(backendUrl);
     if (!response.ok) {

@@ -3,28 +3,26 @@ from typing import List, Dict
 import os
 import psycopg2
 
+from src.utils.db_config import get_db_config
+
 router = APIRouter()
 
-DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "pad")
-DB_USER = os.getenv("POSTGRES_USER", "SpecialOsio")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "oeh_ahb6Ahzah7exeish")
-DB_TABLE = os.getenv("POSTGRES_TABLE", "coins")
+from src.utils.db_config import get_db_config, get_coins_table
+
+COINS_SELECT_QUERY = "SELECT symbol, name FROM {table} ORDER BY symbol;"
+
+def map_coin_row(row):
+    symbol, name = row
+    return {"symbol": symbol, "name": name}
 
 @router.get("/api/coins", response_model=List[Dict[str, str]])
 def get_coins():
-    conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS
-    )
+    table = get_coins_table()
+    conn = psycopg2.connect(**get_db_config())
     try:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT symbol, name FROM {DB_TABLE} ORDER BY symbol;")
+            cur.execute(COINS_SELECT_QUERY.format(table=table))
             rows = cur.fetchall()
-            return [{"symbol": symbol, "name": name} for symbol, name in rows]
+            return [map_coin_row(row) for row in rows]
     finally:
         conn.close()

@@ -3,7 +3,7 @@ import psycopg2
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List
-from .interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
+from interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
 
 # Load environment variables from .env automatically
 try:
@@ -12,13 +12,7 @@ try:
 except ImportError:
     pass  # If dotenv is not installed, skip (but recommend installing for local dev)
 
-DB_CONFIG = {
-    'dbname': os.getenv('POSTGRES_DB'),
-    'user': os.getenv('POSTGRES_USER'),
-    'password': os.getenv('POSTGRES_PASSWORD'),
-    'host': os.getenv('POSTGRES_HOST'),
-    'port': os.getenv('POSTGRES_PORT'),
-}
+from utils.db_config import get_db_config
 ANALYSIS_VIEW = 'analysis_summary'
 
 class DefaultCoinFetcher:
@@ -28,7 +22,7 @@ class DefaultCoinFetcher:
 
 class PostgresCoinRepository:
     def get_new_symbols(self) -> List[str]:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**get_db_config())
         cur = conn.cursor()
         since = datetime.now(timezone.utc) - timedelta(hours=24)
         cur.execute(
@@ -45,7 +39,7 @@ class PostgresCoinRepository:
         """
         Returns a list of (symbol, time_start) tuples for new coins scheduled to launch in the next 24 hours.
         """
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**get_db_config())
         cur = conn.cursor()
         now = datetime.now(timezone.utc)
         next_24h = now + timedelta(hours=24)
@@ -77,7 +71,7 @@ class PostgresRecommendationService:
             threshold = float(threshold_env) if threshold_env is not None else 70.0
         except ValueError:
             threshold = 70.0
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = psycopg2.connect(**get_db_config())
         cur = conn.cursor()
         cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE FLOOR(score_percentage) >= %s", (threshold,))
         coins = [row[0] for row in cur.fetchall()]
@@ -106,7 +100,7 @@ class PrintCronJobManager:
         from datetime import timedelta
         import sys, os
         sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-        from src.utils.cron_db import save_cronjob
+        from utils.cron_db import save_cronjob
         for symbol, time_start in symbol_times:
             # Convert time_start (datetime) to cron format
             if isinstance(time_start, str):
