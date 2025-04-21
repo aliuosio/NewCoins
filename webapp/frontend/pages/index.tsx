@@ -6,6 +6,7 @@ export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedToken, setSelectedToken] = useState('BTC');
+
   const [showCronjobs, setShowCronjobs] = useState(false);
   const [cronjobs, setCronjobs] = useState<any[]>([]);
   const [cronLoading, setCronLoading] = useState(false);
@@ -150,8 +151,20 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            {/* MEXC Spot link under dropdown */}
+            <div className="w-full flex justify-center">
+              <a
+                href={`https://www.mexc.com/de-DE/exchange/${selectedToken}_USDT`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 text-[#2DE282] underline text-sm hover:text-[#FF6A00] transition-colors text-center"
+                style={{ display: 'inline-block' }}
+              >
+                View on MEXC
+              </a>
             </div>
-            {/* Center: Big percent and claim stacked */}
+          </div>
+          {/* Center: Big percent and claim stacked */}
             <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
               <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
                 style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
