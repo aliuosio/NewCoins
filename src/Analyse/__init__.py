@@ -20,7 +20,7 @@ from .Technical import (
 __all__ = [
     'IDataProvider', 'IIndicator', 'IIndicatorResult', 'IIndicatorRunner',
     'BaseIndicator',
-    'CoinGeckoProvider', 'MockDataProvider',
+    'CoinGeckoProvider',
     'IndicatorRunner', 'IndicatorResult',
     # Technical indicators
     'TradingVolumeIndicator',

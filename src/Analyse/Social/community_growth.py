@@ -76,11 +76,8 @@ class CommunityGrowthIndicator(BaseIndicator):
         Returns:
             Dictionary with score and detailed community metrics.
         """
-        coin_id = data.get('id') # Assumes data provider returns coin_id like 'bitcoin'
-        if not coin_id:
-            coin_id = symbol.lower()
-            logger.warning(f"Coin ID not found in data for {symbol}, using symbol '{coin_id}' as fallback.")
-            # return self._create_error_response(symbol, "Coin ID missing in provided data")
+        from .utils import get_coin_id
+        coin_id = get_coin_id(symbol, data)
 
         # --- Caching Logic ---
         cache_key = f"community_{coin_id}"

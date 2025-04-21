@@ -1,5 +1,5 @@
-from .interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
-from .implementations import DefaultCoinFetcher, PostgresCoinRepository, DefaultCoinAnalyzer, PostgresRecommendationService, PrintCronJobManager
+from interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
+from implementations import DefaultCoinFetcher, PostgresCoinRepository, DefaultCoinAnalyzer, PostgresRecommendationService, PrintCronJobManager
 
 class Scheduler:
     def __init__(self,

@@ -17,8 +17,23 @@
     width: 6px;
   }
   ::-webkit-scrollbar-thumb {
-    background: #FF6A00;
     border-radius: 3px;
+  }
+  /* Remove orange border from dropdown/select */
+  select, select:focus, select:active {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  /* Also apply to custom dropdown buttons if needed */
+  .dropdown:focus, .dropdown:active, .dropdown:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+  }
+  /* Ensure dropdown items have the same active and hover background */
+  .dropdown-menu-item:hover,
+  .dropdown-menu-item:active {
+    background: #222 !important;
   }
 }
 
