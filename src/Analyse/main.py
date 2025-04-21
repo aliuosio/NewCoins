@@ -50,6 +50,42 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("pytrends").setLevel(logging.ERROR)
 logging.getLogger("praw").setLevel(logging.WARNING)
 
+def parse_symbols(symbol_args: list) -> list:
+    """Parse and deduplicate comma-separated symbols from CLI arguments."""
+    all_symbols = []
+    for symbol in symbol_args:
+        all_symbols.extend(symbol.split(','))
+    return sorted(set(all_symbols))
+
+def create_technical_indicators(data_provider):
+    """Factory for technical indicators list."""
+    return [
+        TradingVolumeIndicator(data_provider=data_provider),
+        LiquidityIndicator(data_provider=data_provider),
+        WhaleTransactionsIndicator(data_provider=data_provider),
+        TokenDistributionIndicator(data_provider=data_provider),
+        PreSaleVestingIndicator(data_provider=data_provider),
+        SmartContractAuditIndicator(data_provider=data_provider)
+    ]
+
+def create_social_indicators(data_provider):
+    """Factory for social indicators list."""
+    return [
+        SentimentAnalysisIndicator(data_provider=data_provider),
+        DeveloperActivityIndicator(data_provider=data_provider),
+        CommunityGrowthIndicator(data_provider=data_provider),
+        GoogleTrendsIndicator(data_provider=data_provider)
+    ]
+
+def group_results_by_symbol(results, indicators, symbols):
+    """Group indicator results by symbol."""
+    grouped = {}
+    idx = 0
+    for symbol in symbols:
+        grouped[symbol] = results[idx:idx+len(indicators)]
+        idx += len(indicators)
+    return grouped
+
 # Function to set debug level if needed
 def set_debug_level(debug: bool):
     if debug:
@@ -128,70 +164,41 @@ def print_result(result, verbose=False, debug=False):
                 print(f"  ERROR: {result.error}")
 
 
-# Create data provider and indicator instances
-data_provider = CoinGeckoProvider()
-
-technical_indicators = [
-    TradingVolumeIndicator(data_provider=data_provider),
-    LiquidityIndicator(data_provider=data_provider),
-    WhaleTransactionsIndicator(data_provider=data_provider),
-    TokenDistributionIndicator(data_provider=data_provider),
-    PreSaleVestingIndicator(data_provider=data_provider),
-    SmartContractAuditIndicator(data_provider=data_provider)
-]
-
-social_indicators = [
-    SentimentAnalysisIndicator(data_provider=data_provider),
-    DeveloperActivityIndicator(data_provider=data_provider),
-    CommunityGrowthIndicator(data_provider=data_provider),
-    GoogleTrendsIndicator(data_provider=data_provider)
-]
-
+# Create data provider and indicator runner
+# Indicator lists are now created as needed using factories
 runner = IndicatorRunner()
 
 def run_analysis(args, verbose=False, debug=False):
+    """Run technical and social indicators for all provided symbols."""
     # Set logging level based on verbose flag
     if verbose:
-        # In verbose mode, set main loggers to INFO level
         logging.getLogger().setLevel(logging.INFO)
         logging.getLogger("pumptandump").setLevel(logging.INFO)
         logging.getLogger("indicator_runner").setLevel(logging.INFO)
         logging.getLogger("data_provider").setLevel(logging.INFO)
     else:
-        # In normal mode, keep most loggers at WARNING level
-        # Only set essential loggers to INFO
         logging.getLogger("pumptandump").setLevel(logging.INFO)
     
-    # Split comma-separated symbols and flatten the list
-    all_symbols = []
-    for symbol in args.symbols:
-        all_symbols.extend(symbol.split(','))
-    
-    # Remove duplicates and sort
-    all_symbols = sorted(set(all_symbols))
-    
-    # Run indicators for each symbol
+    all_symbols = parse_symbols(args.symbols)
+    data_provider = CoinGeckoProvider()
+    technical_indicators = create_technical_indicators(data_provider)
+    social_indicators = create_social_indicators(data_provider)
+
     technical_results = []
     social_results = []
     for symbol in all_symbols:
         print(f"\n=== RESULTS FOR {symbol} ===\n")
-        
-        # Run technical indicators
         print("=== TECHNICAL INDICATORS ===" if verbose else "TECHNICAL INDICATORS:")
         technical_result = runner.run_all_indicators(technical_indicators, symbol)
         for result in technical_result:
             print_result(result, verbose)
         technical_results.extend(technical_result)
-        
-        # Run social indicators
         print("\n=== SOCIAL INDICATORS ===" if verbose else "\nSOCIAL INDICATORS:")
         social_result = runner.run_all_indicators(social_indicators, symbol)
         for result in social_result:
             print_result(result, verbose)
         social_results.extend(social_result)
-        
         print("\n")
-    
     return technical_results, social_results
 
 
@@ -212,10 +219,9 @@ def check_table_exists(table_name):
             return cur.fetchone()[0]
 
 def main():
-    # Initialize database tables if they don't exist
-    # We don't want to recreate tables on every run as that would delete previous data
+    """Main entry point for the PumpAndDump analysis CLI."""
+    # Ensure DB tables exist
     if not check_table_exists('analyse_technical'):
-        # Tables don't exist, create them
         create_tables()
         create_technical_indicators_table()
         create_social_indicators_table()
@@ -231,32 +237,12 @@ def main():
 
     if args.cmd == 'analyze':
         tech, social = run_analysis(args, args.verbose, args.debug)
-        # Always save results to database
-        tech_results_dict = {}
-        social_results_dict = {}
-        
-        # Split comma-separated symbols and flatten the list
-        all_symbols = []
-        for symbol in args.symbols:
-            all_symbols.extend(symbol.split(','))
-        
-        # Remove duplicates and sort
-        all_symbols = sorted(set(all_symbols))
-        
-        # Group results by symbol
-        tech_index = 0
-        social_index = 0
-        for symbol in all_symbols:
-            symbol_tech_results = tech[tech_index:tech_index+len(technical_indicators)]
-            symbol_social_results = social[social_index:social_index+len(social_indicators)]
-            
-            tech_results_dict[symbol] = symbol_tech_results
-            social_results_dict[symbol] = symbol_social_results
-            
-            tech_index += len(technical_indicators)
-            social_index += len(social_indicators)
-        
-        # Save all results in batch
+        all_symbols = parse_symbols(args.symbols)
+        data_provider = CoinGeckoProvider()
+        technical_indicators = create_technical_indicators(data_provider)
+        social_indicators = create_social_indicators(data_provider)
+        tech_results_dict = group_results_by_symbol(tech, technical_indicators, all_symbols)
+        social_results_dict = group_results_by_symbol(social, social_indicators, all_symbols)
         save_analysis_results_batch(tech_results_dict)
         save_social_results_batch(social_results_dict)
     else:
