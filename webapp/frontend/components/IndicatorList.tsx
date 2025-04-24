@@ -40,7 +40,7 @@ export const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, loadin
               <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
                 <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
                   {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
-                  <span className="text-[#2DE282] font-bold">({indicator.value}/{indicator.max})</span>
+                  <span className="text-[#2DE282] font-bold">({indicator.value.toFixed(2)}/{indicator.max})</span>
                 </span>
               </div>
             </div>
