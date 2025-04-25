@@ -30,20 +30,20 @@ export const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, loadin
   return (
     <>
       {indicators.map((indicator) => (
-        <div key={indicator.name} className="flex justify-between items-center text-sm rounded-lg px-2 sm:px-3 py-1 mb-0.5">
-          <span className="flex items-center gap-2">
-            {iconMap[indicator.name]}
-            <span className="text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl">{indicator.name}</span>
-          </span>
-          <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px] ml-4">
-            <div className="flex items-center gap-2 w-full">
-              <div className="flex-shrink-0 flex items-center justify-end text-right min-w-[65px]">
-                <span className="flex flex-row items-center gap-1 text-[#2DE282] font-bold text-base sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
-                  {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
-                  <span className="text-[#2DE282] font-bold">({indicator.value.toFixed(2)}/{indicator.max})</span>
-                </span>
-              </div>
-            </div>
+        <div key={indicator.name} className="flex flex-col text-sm rounded-lg px-2 sm:px-3 py-1 mb-1">
+          <div className="flex items-center">
+            <span className="flex items-center gap-2">
+              {iconMap[indicator.name]}
+              <span className="text-[#FF6A00] text-sm sm:text-base lg:text-lg">{indicator.name}</span>
+            </span>
+          </div>
+          <div className="mt-0.5 ml-8 flex flex-row items-center gap-2 text-[#2DE282]">
+            <span className="text-sm sm:text-base lg:text-lg">
+              {indicator.value.toFixed(2)}/{indicator.max}
+            </span>
+            <span className="text-sm sm:text-base lg:text-lg" style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
+              {indicator.max && indicator.max > 0 ? `${Math.round(100 * indicator.value / indicator.max)}%` : '0%'}
+            </span>
           </div>
         </div>
       ))}

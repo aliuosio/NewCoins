@@ -128,7 +128,7 @@ export default function Home() {
             <div className="flex flex-col items-start w-[220px] gap-2">
               <div className="relative w-full max-w-[220px]">
                 <button
-                  className="w-full bg-[#242424] text-[#FF6A00] font-bold text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
+                  className="w-full bg-[#242424] text-[#FF6A00] text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
                   onClick={() => setShowDropdown(d => !d)}
                   type="button"
                   style={{ minHeight: '44px' }}
@@ -141,7 +141,7 @@ export default function Home() {
                     {analysedCoins.map(symbol => (
                       <div
                         key={symbol}
-                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00] font-bold' : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'}`}
+                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00]' : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'}`}
                         style={{ minHeight: '40px' }}
                         onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
                       >
@@ -166,7 +166,7 @@ export default function Home() {
           </div>
           {/* Center: Big percent and claim stacked */}
             <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
-              <span className={`text-2xl sm:text-3xl lg:text-5xl font-bold text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
+              <span className={`text-2xl sm:text-3xl lg:text-5xl text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
                 style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
               >
                 {Math.floor(totalScore)}%
@@ -175,7 +175,7 @@ export default function Home() {
             {/* Right: Cronjobs button */}
             <div className="flex flex-row items-center gap-3 justify-end w-full sm:w-auto">
               <button
-                className="w-full sm:w-auto bg-[#242424] text-[#FF6A00] font-bold text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors mt-3 sm:mt-0 max-w-[220px]"
+                className="w-full sm:w-auto bg-[#242424] text-[#FF6A00] text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors mt-3 sm:mt-0 max-w-[220px]"
                 onClick={() => setShowCronjobs(true)}
               >
                 Cronjobs
@@ -183,33 +183,33 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Indicators Row: Social (left on desktop), Technical (right) */}
-          <div className="flex flex-col gap-8">
+          {/* Indicators Row: Technical (left) and Social (right) on desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Technical Indicators */}
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-2 mt-6">
-                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Technical</span>
-                <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
+            <div>
+              <div className="flex justify-between items-center mb-2 mt-4">
+                <span className="uppercase text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Technical</span>
+                <span className="text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">{(() => {
                   const score = technicalIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
                   const max = technicalIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
-                  return `${score.toFixed(1)}/${max} pts`;
+                  return `${score.toFixed(1)}/${max}`;
                 })()}</span>
               </div>
-              <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-6">
+              <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-2">
                 <IndicatorList indicators={technicalIndicators} loading={loading} />
               </div>
             </div>
             {/* Social */}
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-2 mt-4 sm:mt-6 lg:mt-10">
-                <span className="uppercase font-bold text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Social</span>
-                <span className="font-bold text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">Score: {(() => {
+            <div>
+              <div className="flex justify-between items-center mb-2 mt-4">
+                <span className="uppercase text-[#FF6A00] text-base sm:text-lg lg:text-xl px-2 sm:px-3">Social</span>
+                <span className="text-[#2DE282] text-base sm:text-base lg:text-lg text-right px-2 sm:px-3">{(() => {
                   const score = socialIndicators.reduce((sum, i) => sum + (typeof i.value === 'number' ? i.value : 0), 0);
                   const max = socialIndicators.reduce((sum, i) => sum + (typeof i.max === 'number' ? i.max : 0), 0);
-                  return max > 0 ? `${score}/${max} pts` : '0 pts';
+                  return max > 0 ? `${score}/${max}` : '0';
                 })()}</span>
               </div>
-              <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-4">
+              <div className="bg-[#242424] rounded-2xl p-4 sm:p-6 mt-2">
                 <IndicatorList indicators={socialIndicators} loading={loading} />
               </div>
             </div>
@@ -220,13 +220,13 @@ export default function Home() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
             <div className="bg-[#232323] rounded-2xl shadow-xl p-6 w-full max-w-2xl relative animate-fade-in">
               <button
-                className="absolute top-3 right-4 text-[#FF6A00] text-2xl font-bold hover:text-[#FFA64D] focus:outline-none"
+                className="absolute top-3 right-4 text-[#FF6A00] text-2xl hover:text-[#FFA64D] focus:outline-none"
                 onClick={() => setShowCronjobs(false)}
                 aria-label="Close"
               >
                 ×
               </button>
-              <h2 className="text-[#FF6A00] text-xl font-bold mb-4">Cronjobs</h2>
+              <h2 className="text-[#FF6A00] text-xl mb-4">Cronjobs</h2>
               <div className="text-[#FFDEB4] text-sm">
                 {cronLoading ? (
                   <div className="py-4 text-center">Loading...</div>
