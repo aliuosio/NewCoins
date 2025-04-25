@@ -2,7 +2,9 @@
 Rate limiter implementation that follows SOLID principles.
 Separates concerns into distinct components.
 """
+import os
 import time
+import logging
 from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 
@@ -28,6 +30,7 @@ class BaseRateLimiter(IRateLimiter):
         """
         self.rate_limit = rate_limit
         self._last_request_time = 0
+        self._logger = logging.getLogger("rate_limiter")
     
     def wait_if_needed(self) -> None:
         """
@@ -51,9 +54,27 @@ class CoinGeckoRateLimiter(BaseRateLimiter):
     """Rate limiter specifically for CoinGecko API"""
     
     def __init__(self):
-        # CoinGecko free tier rate limit is 10 requests/minute
-        # We use 1.5s delay to stay well under this limit
-        super().__init__(1.5)
+        # Check if we have an API key
+        self.has_api_key = bool(os.getenv('COINGECKO_API_KEY'))
+        
+        # Initialize with appropriate rate limit based on API key presence
+        if self.has_api_key:
+            # Pro tier with API key: 30 requests/minute = 2 seconds between requests
+            # Using 2.5s to stay safely under the limit
+            rate_limit = 2.5
+        else:
+            # Free tier without API key: 10-15 requests/minute = 4-6 seconds between requests
+            # Using 6s to stay safely under the limit
+            rate_limit = 6.0
+            
+        # Call parent constructor first to initialize the logger
+        super().__init__(rate_limit)
+        
+        # Now we can safely use the logger
+        if self.has_api_key:
+            self._logger.info("Using CoinGecko API with API key: 30 requests/minute limit")
+        else:
+            self._logger.warning("Using CoinGecko API without API key: 10-15 requests/minute limit")
     
     def handle_error(self, error: Exception) -> None:
         """Handle rate limit errors from CoinGecko API"""

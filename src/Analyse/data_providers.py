@@ -272,33 +272,40 @@ class CoinGeckoProvider(BaseDataProvider):
                     return 0.0
             price_usd = safe_float(market_data.get('current_price', {}).get('usd', 0), 'price_usd')
             market_cap = safe_float(market_data.get('market_cap', {}).get('usd', 0), 'market_cap')
-            # Calculate 24h volume from /coins/{id}/market_chart endpoint
+            
+            # First try to get volume directly from the coin data response
+            total_volume_24h = 0.0
             try:
-                # Try to get 24h volume from /coins/markets endpoint first
-                try:
-                    params = {
-                        'vs_currency': 'usd',
-                        'ids': coin_id,
-                    }
-                    self._log_api(f"Request: /coins/markets params={params}")
-                    markets_data = self._api_requester.make_request('coins/markets', params=params)
-                    self._log_api(f"Response: /coins/markets data={str(markets_data)[:500]}")
-                    if markets_data and isinstance(markets_data, list) and len(markets_data) > 0:
-                        total_volume_24h = safe_float(markets_data[0].get('total_volume', 0), 'total_volume_24h')
-                    else:
-                        raise ValueError('No markets data found')
-                except Exception as e:
-                    # Fallback to /market_chart method
-                    self._log_api(f"Request: /coins/{coin_id}/market_chart days=1")
-                    one_day_chart = self._get_market_chart(coin_id, days=1)
-                    self._log_api(f"Response: /coins/{coin_id}/market_chart data={str(one_day_chart)[:500]}")
-                    volumes = one_day_chart.get('total_volumes', [])
-                    if len(volumes) >= 2:
-                        total_volume_24h = safe_float(volumes[-1][1], 'total_volumes') - safe_float(volumes[0][1], 'total_volumes')
-                    else:
-                        total_volume_24h = 0.0
+                # Check if volume data is available in the market_data
+                if 'total_volume' in market_data and 'usd' in market_data.get('total_volume', {}):
+                    total_volume_24h = safe_float(market_data.get('total_volume', {}).get('usd', 0), 'total_volume_direct')
+                    self._logger.debug(f"Found volume data directly in coin data: {total_volume_24h}")
+                
+                # If we couldn't get volume from direct coin data, try alternative methods
+                if total_volume_24h <= 0:
+                    # Try to get 24h volume from /coins/markets endpoint
+                    try:
+                        params = {
+                            'vs_currency': 'usd',
+                            'ids': coin_id,
+                        }
+                        self._log_api(f"Request: /coins/markets params={params}")
+                        markets_data = self._api_requester.make_request('coins/markets', params=params)
+                        self._log_api(f"Response: /coins/markets data={str(markets_data)[:500]}")
+                        if markets_data and isinstance(markets_data, list) and len(markets_data) > 0:
+                            total_volume_24h = safe_float(markets_data[0].get('total_volume', 0), 'total_volume_24h')
+                        else:
+                            raise ValueError('No markets data found')
+                    except Exception as e1:
+                        # Fallback to /market_chart method
+                        self._log_api(f"Request: /coins/{coin_id}/market_chart days=1")
+                        one_day_chart = self._get_market_chart(coin_id, days=1)
+                        self._log_api(f"Response: /coins/{coin_id}/market_chart data={str(one_day_chart)[:500]}")
+                        volumes = one_day_chart.get('total_volumes', [])
+                        if len(volumes) >= 2:
+                            total_volume_24h = safe_float(volumes[-1][1], 'total_volumes') - safe_float(volumes[0][1], 'total_volumes')
             except Exception as e:
-                self._logger.error(f"Error calculating 24h volume from /coins/{coin_id}/market_chart for {symbol}: {str(e)}")
+                self._logger.error(f"Error calculating 24h volume for {symbol}: {str(e)}")
                 total_volume_24h = 0.0
             # Placeholder for future: fetch tickers for liquidity analysis
             # tickers = self._api_requester.make_request(f"coins/{coin_id}/tickers")
