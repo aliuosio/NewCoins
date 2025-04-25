@@ -123,26 +123,28 @@ export default function Home() {
         <div className="bg-[#1A1A1A] text-[#FF6A00] rounded-2xl p-4 sm:p-6 md:p-8 lg:p-12 w-full max-w-[98vw] sm:max-w-[400px] md:max-w-[520px] lg:max-w-[700px] mx-auto shadow-lg">
           {/* Header */}
           {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
-          <div className="flex flex-row items-center justify-between w-full mb-4 lg:mb-8 gap-4">
+          <div className="flex flex-row items-start justify-between w-full mb-4 lg:mb-8 gap-4">
             {/* Left: Coin dropdown */}
             <div className="flex flex-col items-start w-[220px] gap-2">
               <div className="relative w-full max-w-[220px]">
                 <button
-                  className="w-full bg-[#242424] text-[#FF6A00] text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-between focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
+                  className="w-full bg-[#242424] text-[#FF6A00] text-base sm:text-lg rounded-lg px-4 py-2 flex items-center justify-center focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
+                  style={{ minHeight: '44px' }}
                   onClick={() => setShowDropdown(d => !d)}
                   type="button"
-                  style={{ minHeight: '44px' }}
                 >
-                  {selectedToken}
-                  <svg className="ml-2 w-4 h-4 text-[#FF6A00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                  <span className="flex items-center justify-center gap-2 w-full">
+                    {selectedToken}
+                    <svg className="w-4 h-4 text-[#FF6A00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                  </span>
                 </button>
                 {showDropdown && (
                   <div className="absolute z-10 w-full coin-dropdown-menu rounded-lg shadow-lg mt-2 max-h-60 overflow-auto border border-[#333]">
                     {analysedCoins.map(symbol => (
                       <div
                         key={symbol}
-                        className={`px-4 py-2 cursor-pointer ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00]' : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'}`}
-                        style={{ minHeight: '40px' }}
+                        className={`w-full px-4 py-2 text-base sm:text-lg flex items-center justify-center cursor-pointer rounded-lg transition-colors ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00]' : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'}`}
+                        style={{ minHeight: '44px' }}
                         onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
                       >
                         {symbol}
@@ -151,31 +153,31 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            {/* MEXC Spot link under dropdown */}
-            <div className="w-full flex justify-center">
-              <a
-                href={`https://www.mexc.com/de-DE/exchange/${selectedToken}_USDT`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 text-[#2DE282] underline text-sm hover:text-[#FF6A00] transition-colors text-center"
-                style={{ display: 'inline-block' }}
-              >
-                View on MEXC
-              </a>
             </div>
-          </div>
-          {/* Center: Big percent and claim stacked */}
+            {/* Center: Big percent and claim stacked */}
             <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
               <span className={`text-2xl sm:text-3xl lg:text-5xl text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
                 style={{ textShadow: '0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
               >
                 {Math.floor(totalScore)}%
               </span>
+              <div className="w-full flex justify-center">
+                <a
+                  href={`https://www.mexc.com/de-DE/exchange/${selectedToken}_USDT`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 text-[#2DE282] underline text-sm hover:text-[#FF6A00] transition-colors text-center"
+                  style={{ display: 'inline-block' }}
+                >
+                  View on MEXC
+                </a>
+              </div>
             </div>
             {/* Right: Cronjobs button */}
             <div className="flex flex-row items-center gap-3 justify-end w-full sm:w-auto">
               <button
-                className="w-full sm:w-auto bg-[#242424] text-[#FF6A00] text-xs sm:text-sm lg:text-lg px-3 py-1.5 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg hover:text-[#FFA64D] cursor-pointer border-none outline-none transition-colors mt-3 sm:mt-0 max-w-[220px]"
+                className="w-full max-w-[220px] bg-[#242424] text-[#FF6A00] text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-center focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors mt-3 sm:mt-0"
+                style={{ minHeight: '44px' }}
                 onClick={() => setShowCronjobs(true)}
               >
                 Cronjobs
