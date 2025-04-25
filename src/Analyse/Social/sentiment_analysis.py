@@ -176,6 +176,11 @@ class SentimentAnalysisIndicator(BaseIndicator):
         sentiment_ratio = processed_data.get('sentiment_ratio', 1)
         trend_value = processed_data.get('trend_value', 0)
 
+        # Ensure sentiment is not None before accessing its attributes
+        if sentiment is None:
+            sentiment = {}
+            logger.warning("Sentiment data is None, using empty dictionary instead")
+
         # Base score from positive sentiment percentage (old logic)
         base_score = sentiment.get('positive', 0) * 10
 

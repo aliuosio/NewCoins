@@ -71,8 +71,23 @@ class WhaleTransactionsIndicator(BaseIndicator):
         Returns:
             Dictionary with calculation results
         """
+        # Ensure data is not None before accessing its attributes
+        if data is None:
+            self._logger.error(f"Data is None for {symbol}")
+            return {
+                'score': 0.0,
+                'details': {
+                    'error': 'No data available',
+                    'note': 'Zero score due to missing data.'
+                }
+            }
+            
         # Extract price and volume data from market chart format
         market_chart = data.get('market_chart', {})
+        if market_chart is None:
+            market_chart = {}
+            self._logger.warning(f"Market chart is None for {symbol}, using empty dictionary instead")
+            
         prices = market_chart.get('prices', [])
         volumes = market_chart.get('total_volumes', [])
         
