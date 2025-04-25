@@ -3,6 +3,7 @@
 Database connection and persistence utilities for PumpAndDump app.
 """
 import os
+# psycopg2-binary installs as psycopg2 module
 import psycopg2
 from psycopg2 import pool
 from psycopg2.extras import execute_values
