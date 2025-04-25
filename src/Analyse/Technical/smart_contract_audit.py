@@ -159,6 +159,17 @@ class SmartContractAuditIndicator(BaseIndicator):
         
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate the smart contract audit score with enhanced security analysis"""
+        # Check if data is None
+        if data is None:
+            print(f"Data is None for {symbol}")
+            return {
+                'score': 0.0,
+                'details': {
+                    'error': 'No data available',
+                    'note': 'Zero score due to missing data.'
+                }
+            }
+            
         # Get coin ID
         coin_id = data.get('coin_id', f"mock-{symbol.lower()}")
         
@@ -167,6 +178,10 @@ class SmartContractAuditIndicator(BaseIndicator):
             audit_data = {}
             if hasattr(self._data_provider, 'get_audit_data'):
                 audit_data = self._data_provider.get_audit_data(coin_id)
+                # Check if audit_data is None
+                if audit_data is None:
+                    print(f"Audit data is None for {coin_id}, using simulated data")
+                    audit_data = self._generate_simulated_audit(coin_id)
             else:
                 # Fallback to simulated data if the provider doesn't support audit data
                 audit_data = self._generate_simulated_audit(coin_id)
@@ -174,6 +189,11 @@ class SmartContractAuditIndicator(BaseIndicator):
             # Handle any exceptions that occur during audit data retrieval
             print(f"Error retrieving audit data: {e}")
             audit_data = self._generate_simulated_audit(coin_id)
+            
+        # Ensure audit_data is not None
+        if audit_data is None:
+            print(f"Audit data is still None after fallback for {coin_id}, creating empty data")
+            audit_data = {}
         
         # Create audit_info structure from audit_data
         audit_info = {
