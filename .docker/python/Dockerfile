@@ -6,6 +6,7 @@ LABEL maintainer="Osiozekhai Aliu"
 RUN apt update && apt full-upgrade -y && \
     apt install -y \
         cron \
+        curl \
         postgresql-client \
         nano \
         uvicorn && \
