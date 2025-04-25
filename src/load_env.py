@@ -46,6 +46,11 @@ def load_environment_variables():
     reddit_client_id = os.getenv('REDDIT_CLIENT_ID')
     reddit_client_secret = os.getenv('REDDIT_CLIENT_SECRET')
     
+    # Check if cache control variables are set
+    api_cache_enabled = os.getenv('API_CACHE_ENABLED', 'false').lower() == 'true'
+    api_cache_duration = os.getenv('API_CACHE_DURATION', '3600')
+    api_cache_dir = os.getenv('API_CACHE_DIR', '/cache')
+    
     # Log which API keys are available
     if github_api_key:
         logger.info("GitHub API key is set")
@@ -61,6 +66,16 @@ def load_environment_variables():
         logger.info("Reddit API keys are set")
     else:
         logger.warning("Reddit API keys are not set. SentimentAnalysisIndicator and CommunityGrowthIndicator may not work properly.")
+        
+    # Log cache control settings
+    logger.info(f"API cache is {'ENABLED' if api_cache_enabled else 'DISABLED'}")
+    try:
+        cache_duration_int = int(api_cache_duration)
+        logger.info(f"API cache duration: {cache_duration_int} seconds")
+    except ValueError:
+        logger.warning(f"Invalid API_CACHE_DURATION value: {api_cache_duration}. Using default: 3600 seconds.")
+    
+    logger.info(f"API cache directory: {api_cache_dir}")
         
     # Return True if any API keys are set
     return any([github_api_key, twitter_bearer_token, reddit_client_id and reddit_client_secret])

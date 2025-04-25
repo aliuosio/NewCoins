@@ -8,6 +8,7 @@ from abc import abstractmethod, ABC
 from typing import Dict, Any, Optional
 
 from .interfaces import IIndicator, IDataProvider
+from utils.cache_utils import is_cache_enabled, get_cache_duration
 
 
 class BaseIndicator(IIndicator):
@@ -16,8 +17,8 @@ class BaseIndicator(IIndicator):
     Implements common functionality like caching and calculation structure,
     while requiring subclasses to implement the specific calculation logic.
     """
-    # Standard cache duration (1 hour) - can be overridden by subclasses
-    CACHE_TTL = 3600
+    # Default cache duration - will be overridden by API_CACHE_DURATION from .env
+    CACHE_TTL = None
 
     def __init__(self, name: str, max_score: float, data_provider: IDataProvider):
         """
@@ -35,6 +36,9 @@ class BaseIndicator(IIndicator):
         # Cache storage
         self._cache: Dict[str, Any] = {}
         self._cache_expiry: Dict[str, float] = {}
+        # Use the cache duration from .env if CACHE_TTL is None
+        if self.CACHE_TTL is None:
+            self.CACHE_TTL = get_cache_duration()
 
     @property
     def name(self) -> str:
@@ -64,8 +68,8 @@ class BaseIndicator(IIndicator):
             cache_key = f"{self._name}_{symbol}"
             current_time = time.time()
             
-            # Check if we have cached data that hasn't expired
-            if cache_key in self._cache and current_time < self._cache_expiry[cache_key]:
+            # Check if caching is enabled and we have cached data that hasn't expired
+            if is_cache_enabled() and cache_key in self._cache and current_time < self._cache_expiry[cache_key]:
                 self._logger.debug(f"Using cached data for {symbol}")
                 return self._cache[cache_key]
             
@@ -99,8 +103,9 @@ class BaseIndicator(IIndicator):
             })
             
             # Cache the result
-            self._cache[cache_key] = result
-            self._cache_expiry[cache_key] = current_time + self.CACHE_TTL
+            if is_cache_enabled():
+                self._cache[cache_key] = result
+                self._cache_expiry[cache_key] = current_time + self.CACHE_TTL
             
             return result
             
@@ -134,6 +139,10 @@ class BaseIndicator(IIndicator):
         Returns:
             bool: True if cache is valid, False otherwise
         """
+        # If caching is disabled, always return False
+        if not is_cache_enabled():
+            return False
+            
         if key not in self._cache or key not in self._cache_expiry:
             return False
         is_valid = time.time() < self._cache_expiry.get(key, 0)
@@ -155,6 +164,10 @@ class BaseIndicator(IIndicator):
         Returns:
             Any: The cached result
         """
+        # If caching is disabled, just return the result without caching
+        if not is_cache_enabled():
+            return result
+            
         if ttl is None:
             ttl = self.CACHE_TTL
         self._cache[key] = result
