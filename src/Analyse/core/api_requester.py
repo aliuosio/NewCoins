@@ -90,9 +90,17 @@ class CoinGeckoApiRequester(BaseApiRequester):
             if params is None:
                 params = {}
             
+            # Special handling for Pro API endpoints
             if self.api_key:
                 # For Pro API, the key is passed as a header
                 headers = {'x-cg-pro-api-key': self.api_key}
+                
+                # Pro API requires different parameters for certain endpoints
+                if endpoint == 'coins/list':
+                    # Pro API requires 'include_platform=false' for coins/list
+                    params['include_platform'] = 'false'
+                    self._logger.debug(f"Using Pro API parameters for {endpoint}: {params}")
+                
                 return super().make_request(endpoint, params, headers=headers)
             else:
                 return super().make_request(endpoint, params)
