@@ -57,46 +57,75 @@ class GitHubClient(BaseAPIClient):
         Returns:
             Repository data as a dictionary
         """
-        owner = kwargs.get('owner')
-        repo = kwargs.get('repo')
-        days = kwargs.get('days', 30)
-        
-        # If owner and repo are provided, use them directly
-        if owner and repo:
-            return self.get_repository_data(owner, repo, days)
-        
-        # Otherwise, try to parse the query or search for repositories
-        if '/' in query:
-            # Query is in the format "owner/repo"
-            parts = query.split('/')
-            if len(parts) == 2:
-                owner, repo = parts
-                return self.get_repository_data(owner, repo, days)
-        
-        # Map cryptocurrency names to GitHub repositories
-        crypto_repos = {
-            'bitcoin': {'owner': 'bitcoin', 'repo': 'bitcoin'},
-            'ethereum': {'owner': 'ethereum', 'repo': 'go-ethereum'},
-            'binancecoin': {'owner': 'binance-chain', 'repo': 'bsc'},
-            'ripple': {'owner': 'ripple', 'repo': 'rippled'},
-            'cardano': {'owner': 'input-output-hk', 'repo': 'cardano-node'},
-            'solana': {'owner': 'solana-labs', 'repo': 'solana'},
-            'polkadot': {'owner': 'paritytech', 'repo': 'polkadot'},
-            'dogecoin': {'owner': 'dogecoin', 'repo': 'dogecoin'},
-            'shiba-inu': {'owner': 'shytoshikusama', 'repo': 'shibaswap'}
-        }
-        
-        # Check if query matches any known cryptocurrency
-        query_lower = query.lower()
-        for crypto, repo_info in crypto_repos.items():
-            if crypto in query_lower or query_lower in crypto:
-                return self.get_repository_data(repo_info['owner'], repo_info['repo'], days)
-        
-        # If no match found, search for repositories
-        search_results = self.search_repositories(query)
-        if search_results and len(search_results) > 0:
-            top_repo = search_results[0]
-            return self.get_repository_data(top_repo['owner'], top_repo['name'], days)
+        try:
+            if query is None:
+                logger.error("Query is None in get_data")
+                return self._get_simulated_repository_data("unknown")
+                
+            owner = kwargs.get('owner')
+            repo = kwargs.get('repo')
+            days = kwargs.get('days', 30)
+            
+            # If owner and repo are provided, use them directly
+            if owner and repo:
+                try:
+                    return self.get_repository_data(owner, repo, days)
+                except Exception as e:
+                    logger.error(f"Error getting repository data for {owner}/{repo}: {str(e)}")
+                    return self._get_simulated_repository_data(f"{owner}/{repo}")
+            
+            # Otherwise, try to parse the query or search for repositories
+            if '/' in query:
+                # Query is in the format "owner/repo"
+                parts = query.split('/')
+                if len(parts) == 2:
+                    owner, repo = parts
+                    try:
+                        return self.get_repository_data(owner, repo, days)
+                    except Exception as e:
+                        logger.error(f"Error getting repository data for {owner}/{repo}: {str(e)}")
+                        return self._get_simulated_repository_data(f"{owner}/{repo}")
+            
+            # Map cryptocurrency names to GitHub repositories
+            crypto_repos = {
+                'bitcoin': {'owner': 'bitcoin', 'repo': 'bitcoin'},
+                'ethereum': {'owner': 'ethereum', 'repo': 'go-ethereum'},
+                'binancecoin': {'owner': 'binance-chain', 'repo': 'bsc'},
+                'ripple': {'owner': 'ripple', 'repo': 'rippled'},
+                'cardano': {'owner': 'input-output-hk', 'repo': 'cardano-node'},
+                'solana': {'owner': 'solana-labs', 'repo': 'solana'},
+                'polkadot': {'owner': 'paritytech', 'repo': 'polkadot'},
+                'dogecoin': {'owner': 'dogecoin', 'repo': 'dogecoin'},
+                'shiba-inu': {'owner': 'shytoshikusama', 'repo': 'shibaswap'}
+            }
+            
+            # Check if query matches any known cryptocurrency
+            query_lower = query.lower()
+            for crypto, repo_info in crypto_repos.items():
+                if crypto in query_lower or query_lower in crypto:
+                    try:
+                        return self.get_repository_data(repo_info['owner'], repo_info['repo'], days)
+                    except Exception as e:
+                        logger.error(f"Error getting repository data for {repo_info['owner']}/{repo_info['repo']}: {str(e)}")
+                        return self._get_simulated_repository_data(crypto)
+            
+            # If no match found, search for repositories
+            try:
+                search_results = self.search_repositories(query)
+                if search_results and len(search_results) > 0:
+                    top_repo = search_results[0]
+                    if top_repo is None or 'owner' not in top_repo or 'name' not in top_repo:
+                        logger.error(f"Invalid search result for {query}: {top_repo}")
+                        return self._get_simulated_repository_data(query)
+                    try:
+                        return self.get_repository_data(top_repo['owner'], top_repo['name'], days)
+                    except Exception as e:
+                        logger.error(f"Error getting repository data for {top_repo['owner']}/{top_repo['name']}: {str(e)}")
+                        return self._get_simulated_repository_data(f"{top_repo['owner']}/{top_repo['name']}")
+            except Exception as e:
+                logger.error(f"Error searching repositories for {query}: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected error in get_data for {query}: {str(e)}")
         
         # If all else fails, return simulated data
         logger.warning(f"No GitHub repository found for {query}. Using simulated data.")
