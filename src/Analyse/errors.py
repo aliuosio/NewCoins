@@ -31,9 +31,11 @@ class APIError(DataProviderError):
     """
     def __init__(self, message: str, symbol: Optional[str] = None, provider: Optional[str] = None,
                  status_code: Optional[int] = None, endpoint: Optional[str] = None):
-        super().__init__(message, symbol, provider)
+        # Initialize attributes before calling parent constructor
         self.status_code = status_code
         self.endpoint = endpoint
+        # Call parent constructor
+        super().__init__(message, symbol, provider)
     
     def _format_message(self) -> str:
         """

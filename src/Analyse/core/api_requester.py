@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 
 from .interfaces import IApiRequester
+from ..errors import APIError
 
 
 class BaseApiRequester(IApiRequester):
@@ -57,7 +58,10 @@ class BaseApiRequester(IApiRequester):
             
         except requests.exceptions.RequestException as e:
             self.handle_error(e)
-            raise APIError(f"API request failed: {str(e)}")
+            status_code = None
+            if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                status_code = e.response.status_code
+            raise APIError(f"API request failed: {str(e)}", status_code=status_code, endpoint=endpoint)
     
     def handle_error(self, error: Exception) -> None:
         """Handle API request errors"""
@@ -71,37 +75,67 @@ class CoinGeckoApiRequester(BaseApiRequester):
         # Get API key and base URL from environment variables
         self.api_key = os.getenv('COINGECKO_API_KEY')
         
-        # Determine the appropriate base URL
+        # Always use the regular API URL since we have a Demo API key
+        # Demo API keys must use api.coingecko.com, not pro-api.coingecko.com
+        base_url = os.getenv('COINGECKO_BASE_URL', 'https://api.coingecko.com/api/v3')
+        super().__init__(base_url)
+        
         if self.api_key:
-            # Use Pro API URL when API key is available
-            base_url = os.getenv('COINGECKO_PRO_BASE_URL', 'https://pro-api.coingecko.com/api/v3')
-            super().__init__(base_url)
-            self._logger.info(f"CoinGecko API key found - Using Pro API at {base_url}")
+            self._logger.info(f"CoinGecko API key found - Using API at {base_url}")
         else:
-            # Use free tier API URL when no API key is available
-            base_url = os.getenv('COINGECKO_BASE_URL', 'https://api.coingecko.com/api/v3')
-            super().__init__(base_url)
             self._logger.warning(f"No CoinGecko API key found. Using free tier with limited rate at {base_url}")
     
     def make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """Make a request to CoinGecko API"""
         try:
-            # Add API key to params if available
+            # Initialize params if None
             if params is None:
                 params = {}
             
-            # Special handling for Pro API endpoints
+            # Add API key to params if available
             if self.api_key:
-                # For Pro API, the key is passed as a header
-                headers = {'x-cg-pro-api-key': self.api_key}
+                # For regular API with Demo key, add the key as a query parameter
+                params['x_cg_demo_api_key'] = self.api_key
                 
-                # Pro API requires different parameters for certain endpoints
+                # Set standard parameters for different endpoints
                 if endpoint == 'coins/list':
-                    # Pro API requires 'include_platform=false' for coins/list
-                    params['include_platform'] = 'false'
-                    self._logger.debug(f"Using Pro API parameters for {endpoint}: {params}")
+                    # No special parameters needed
+                    self._logger.debug(f"Using API parameters for {endpoint}: {params}")
                 
-                return super().make_request(endpoint, params, headers=headers)
+                # Handle coins/markets endpoint
+                elif endpoint == 'coins/markets':
+                    # Ensure required parameters are set
+                    if 'vs_currency' not in params:
+                        params['vs_currency'] = 'usd'
+                    self._logger.debug(f"Using API parameters for {endpoint}: {params}")
+                
+                # Handle /coins/{id} endpoint
+                elif endpoint.startswith('coins/') and '/market_chart' not in endpoint and endpoint != 'coins/list' and not endpoint.startswith('coins/markets'):
+                    # Add standard parameters
+                    if 'localization' not in params:
+                        params['localization'] = 'false'
+                    if 'tickers' not in params:
+                        params['tickers'] = 'false'
+                    if 'market_data' not in params:
+                        params['market_data'] = 'true'
+                    if 'community_data' not in params:
+                        params['community_data'] = 'true'
+                    if 'developer_data' not in params:
+                        params['developer_data'] = 'true'
+                    if 'sparkline' not in params:
+                        params['sparkline'] = 'false'
+                    self._logger.debug(f"Using API parameters for {endpoint}: {params}")
+                
+                # Handle /coins/{id}/market_chart endpoint
+                elif '/market_chart' in endpoint:
+                    # Ensure required parameters are set
+                    if 'vs_currency' not in params:
+                        params['vs_currency'] = 'usd'
+                    if 'days' not in params:
+                        params['days'] = '90'
+                    self._logger.debug(f"Using API parameters for {endpoint}: {params}")
+                
+                return super().make_request(endpoint, params)
             else:
                 return super().make_request(endpoint, params)
         except requests.exceptions.HTTPError as e:
