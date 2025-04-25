@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 
 from .interfaces import ICache
+from utils.cache_utils import is_cache_enabled, get_cache_duration
 
 
 class Cache(ICache):
@@ -24,16 +25,17 @@ class Cache(ICache):
     
     def __init__(self, 
                  cache_dir: str, 
-                 cache_duration: int = 3600):
+                 cache_duration: int = None):
         """
         Initialize the cache
         
         Args:
             cache_dir: Directory to store cache files
-            cache_duration: Duration in seconds to keep cached data
+            cache_duration: Duration in seconds to keep cached data (if None, uses API_CACHE_DURATION from .env)
         """
         self.cache_dir = Path(cache_dir)
-        self.cache_duration = cache_duration
+        # Use the provided duration or get it from .env
+        self.cache_duration = cache_duration if cache_duration is not None else get_cache_duration()
         self.cache_dir.mkdir(parents=True, exist_ok=True)
     
     def get(self, key: str) -> Optional[Any]:
@@ -46,6 +48,10 @@ class Cache(ICache):
         Returns:
             Cached data if exists and not expired, None otherwise
         """
+        # If caching is disabled, always return None
+        if not is_cache_enabled():
+            return None
+            
         cache_file = self._get_cache_file(key)
         if not cache_file.exists():
             return None
@@ -72,6 +78,10 @@ class Cache(ICache):
             value: Data to cache
             ttl: Time-to-live in seconds (optional)
         """
+        # If caching is disabled, don't cache anything
+        if not is_cache_enabled():
+            return
+            
         cache_file = self._get_cache_file(key)
         
         try:
