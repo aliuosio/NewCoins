@@ -98,9 +98,6 @@ class SentimentAnalysisIndicator(BaseIndicator):
                 cached_data['score'] = score
                 return cached_data
             # --- End Caching Logic ---
-        except Exception as e:
-            logger.error(f"Unexpected error in sentiment analysis for {symbol}: {str(e)}")
-            return self._create_empty_sentiment_data(symbol)
 
             logger.info(f"Fetching/processing sentiment data for {coin_id}")
             
@@ -125,73 +122,82 @@ class SentimentAnalysisIndicator(BaseIndicator):
                 if sentiment_response is None:
                     logger.warning(f"Sentiment response is None for {coin_id}. Using simulated data.")
                     return self._create_simulated_sentiment_data(coin_id)
+                    
+                # Extract sentiment data from response
+                sentiment = sentiment_response.get('sentiment', {})
+                if sentiment is None:
+                    sentiment = {}
+                    logger.warning(f"Sentiment data is None for {coin_id}, using empty dictionary")
+                    
+                sentiment_ratio = sentiment_response.get('sentiment_ratio', 1.0)
+                trend = sentiment_response.get('trend', 'stable')
+                trend_value = sentiment_response.get('trend_value', 0)
+                samples = sentiment_response.get('samples', [])
+                
+                # Extract community data from the data provider
+                community_data = data.get('community_data', {})
+                if community_data is None:
+                    community_data = {}
+                    logger.warning(f"Community data is None for {coin_id}, using empty dictionary")
+                    
+                developer_data = data.get('developer_data', {})
+                if developer_data is None:
+                    developer_data = {}
+                    logger.warning(f"Developer data is None for {coin_id}, using empty dictionary")
+                
+                twitter_followers = community_data.get('twitter_followers', 0)
+                reddit_subscribers = community_data.get('reddit_subscribers', 0)
+                reddit_active_accounts = community_data.get('reddit_active_accounts_48h', 0)
+                github_stars = developer_data.get('stars', 0)
+                
+                # Format the data to match the expected structure
+                sentiment_data = {
+                    'sentiment': sentiment,
+                    'sentiment_ratio': sentiment_ratio,
+                    'trend': trend,
+                    'trend_value': trend_value,
+                    'engagement': {
+                        'twitter_followers': twitter_followers,
+                        'reddit_subscribers': reddit_subscribers,
+                        'reddit_active_ratio': round((reddit_active_accounts / max(reddit_subscribers, 1)), 3) if reddit_subscribers else 0,
+                        'github_stars': github_stars,
+                        'total_social_reach': twitter_followers + reddit_subscribers
+                    },
+                    'recent_posts': [
+                        {
+                            'text': sample.get('text', ''),
+                            'sentiment': sample.get('sentiment', 'neutral'),
+                            'platform': sample.get('platform', 'Unknown'),
+                            'timestamp': sample.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                        }
+                        for sample in samples[:5]  # Include up to 5 samples
+                    ],
+                    'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'real_data': True
+                }
+                
+                logger.info(f"Successfully fetched real-time sentiment data for {coin_id}")
+
+                # Calculate the final score from the processed data
+                score = self._calculate_indicator_score(sentiment_data)
+                sentiment_data['score'] = score # Add score to the dictionary
+
+                # Cache the processed data
+                self._cache_result(cache_key, sentiment_data)
+
+                return sentiment_data
+                
             except Exception as e:
-                logger.error(f"Error getting sentiment data for {coin_id}: {str(e)}")
+                logger.error(f"Error processing sentiment data for {coin_id}: {str(e)}")
                 return self._create_simulated_sentiment_data(coin_id)
                 
-            # Extract sentiment data from response
-            sentiment = sentiment_response.get('sentiment', {})
-            if sentiment is None:
-                sentiment = {}
-                logger.warning(f"Sentiment data is None for {coin_id}, using empty dictionary")
-                
-            sentiment_ratio = sentiment_response.get('sentiment_ratio', 1.0)
-            trend = sentiment_response.get('trend', 'stable')
-            trend_value = sentiment_response.get('trend_value', 0)
-            samples = sentiment_response.get('samples', [])
-            
-            # Extract community data from the data provider
-            community_data = data.get('community_data', {})
-            if community_data is None:
-                community_data = {}
-                logger.warning(f"Community data is None for {coin_id}, using empty dictionary")
-                
-            developer_data = data.get('developer_data', {})
-            if developer_data is None:
-                developer_data = {}
-                logger.warning(f"Developer data is None for {coin_id}, using empty dictionary")
-            
-            twitter_followers = community_data.get('twitter_followers', 0)
-            reddit_subscribers = community_data.get('reddit_subscribers', 0)
-            reddit_active_accounts = community_data.get('reddit_active_accounts_48h', 0)
-            github_stars = developer_data.get('stars', 0)
+        except Exception as e:
+            logger.error(f"Unexpected error in sentiment analysis for {symbol}: {str(e)}")
+            return self._create_empty_sentiment_data(symbol)
         
-        # Format the data to match the expected structure
-        sentiment_data = {
-            'sentiment': sentiment,
-            'sentiment_ratio': sentiment_ratio,
-            'trend': trend,
-            'trend_value': trend_value,
-            'engagement': {
-                'twitter_followers': twitter_followers,
-                'reddit_subscribers': reddit_subscribers,
-                'reddit_active_ratio': round((reddit_active_accounts / max(reddit_subscribers, 1)), 3) if reddit_subscribers else 0,
-                'github_stars': github_stars,
-                'total_social_reach': twitter_followers + reddit_subscribers
-            },
-            'recent_posts': [
-                {
-                    'text': sample.get('text', ''),
-                    'sentiment': sample.get('sentiment', 'neutral'),
-                    'platform': sample.get('platform', 'Unknown'),
-                    'timestamp': sample.get('created_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                }
-                for sample in samples[:5]  # Include up to 5 samples
-            ],
-            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'real_data': True
-        }
-        
-        logger.info(f"Successfully fetched real-time sentiment data for {coin_id}")
-
-        # Calculate the final score from the processed data
-        score = self._calculate_indicator_score(sentiment_data)
-        sentiment_data['score'] = score # Add score to the dictionary
-
-        # Cache the processed data
-        self._cache_result(cache_key, sentiment_data)
-
-        return sentiment_data
+        # This code should never be reached as all paths return early
+        logger.error(f"Unexpected code path reached in sentiment analysis for {symbol}")
+        return self._create_empty_sentiment_data(symbol)
 
 
     def _calculate_indicator_score(self, processed_data: Dict[str, Any]) -> float:
