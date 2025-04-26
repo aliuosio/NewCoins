@@ -15,28 +15,7 @@ from .db import DBConnection
 
 logger = logging.getLogger("social_db")
 
-def create_social_indicators_table():
-    """
-    Create the social indicators table if it doesn't exist.
-    """
-    table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
-    coins_table = os.getenv('POSTGRES_TABLE', 'coins')
-    # Load SQL from project-level sql folder
-    sql_path = '/src/sql/create_analyse_social.sql'
-    
-    try:
-        with open(sql_path) as f:
-            create_query = f.read().format(table=table, coins_table=coins_table)
-        
-        with DBConnection() as conn:
-            with conn.cursor() as cur:
-                # Create table schema
-                cur.execute(create_query)
-            conn.commit()
-        logger.info(f"Successfully created/updated social indicators table: {table}")
-    except Exception as e:
-        logger.error(f"Error creating social indicators table: {e}")
-        raise
+# Table creation function removed as SQL imports are now handled by Docker initialization
 
 def save_social_results(results: List, symbol: str, conn=None):
     """

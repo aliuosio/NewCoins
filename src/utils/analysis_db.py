@@ -15,47 +15,7 @@ from .db import DBConnection
 
 logger = logging.getLogger("analysis_db")
 
-def create_technical_indicators_table():
-    """
-    Create the technical indicators table if it doesn't exist, and also create the analysis_summary view.
-    """
-    table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
-    # Load SQL from project-level sql folder
-    sql_path = '/src/sql/create_analyse_technical.sql'
-    
-    try:
-        with open(sql_path) as f:
-            create_query = f.read().format(table=table)
-        
-        with DBConnection() as conn:
-            with conn.cursor() as cur:
-                # Create table schema
-                cur.execute(create_query)
-            conn.commit()
-        logger.info(f"Successfully created/updated analysis table: {table}")
-        # Now create the analysis_summary view
-        create_analysis_summary_view()
-    except Exception as e:
-        logger.error(f"Error creating analysis table: {e}")
-        raise
-
-
-def create_analysis_summary_view():
-    """
-    Create the analysis_summary view if it doesn't exist.
-    """
-    sql_path = '/src/sql/create_analysis_view.sql'
-    try:
-        with open(sql_path) as f:
-            create_view_query = f.read()
-        with DBConnection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(create_view_query)
-            conn.commit()
-        logger.info("Successfully created/updated analysis_summary view.")
-    except Exception as e:
-        logger.error(f"Error creating analysis_summary view: {e}")
-        raise
+# Table and view creation functions removed as SQL imports are now handled by Docker initialization
 
 def save_analysis_results(results: List, symbol: str, conn=None):
     """
