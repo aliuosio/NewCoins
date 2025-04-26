@@ -15,7 +15,7 @@ const CoinDropdown: FC<CoinDropdownProps> = ({ selectedToken, analysedCoins, onS
   const [imeStart, setImeStart] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch ime_start data when token changes
+    // Fetch time_start data when token changes
     if (selectedToken) {
       fetch(`/api/coin_start_time/${selectedToken}`)
         .then(res => res.json())
@@ -53,10 +53,10 @@ const CoinDropdown: FC<CoinDropdownProps> = ({ selectedToken, analysedCoins, onS
           </div>
         )}
       </div>
-      {/* Display ime_start if available */}
+      {/* Display time_start if available */}
       {imeStart && (
         <div className="text-[#FF6A00] text-sm sm:text-base text-center px-4 py-1 rounded-lg bg-[#242424]">
-          IME Start: {imeStart}
+          Time Start: {imeStart}
         </div>
       )}
     </div>

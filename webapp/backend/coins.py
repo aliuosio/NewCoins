@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from src.utils.db import DBConnection
 
 router = APIRouter()
@@ -27,4 +27,4 @@ def get_coin_start_time(symbol: str):
             row = cur.fetchone()
             if row:
                 return {"symbol": row[0], "time_start": row[1]}
-            return {"detail": f"Symbol '{symbol}' not found."}, 404
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found.")
