@@ -1,14 +1,14 @@
 -- SQL script to create the coins table schema
--- Usage: Placeholder {table} is formatted in Python before execution
+-- Usage: Placeholder coins is formatted in Python before execution
 -- This table tracks cryptocurrencies and their trading information
 
 -- TRADING INFORMATION TRACKING:
 -- This table stores basic information about cryptocurrencies and their trading history
 -- It can be used to track buy/sell operations and calculate profits/losses
 
-DROP TABLE IF EXISTS {table} CASCADE;
+DROP TABLE IF EXISTS coins CASCADE;
 
-CREATE TABLE IF NOT EXISTS {table} (
+CREATE TABLE IF NOT EXISTS coins (
     -- Basic identification
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,                 -- Full name of the cryptocurrency (e.g., Bitcoin)
@@ -30,4 +30,4 @@ CREATE TABLE IF NOT EXISTS {table} (
 );
 
 -- Create index for faster queries
-CREATE INDEX IF NOT EXISTS idx_{table}_symbol ON {table}(symbol);
+CREATE INDEX IF NOT EXISTS idx_coins_symbol ON coins(symbol);

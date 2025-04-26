@@ -1,11 +1,11 @@
 -- Drop existing table and related trigger/function
-DROP TABLE IF EXISTS {table} CASCADE;
-DROP FUNCTION IF EXISTS update_updated_at_column_{table} CASCADE;
+DROP TABLE IF EXISTS analyse_technical CASCADE;
+DROP FUNCTION IF EXISTS update_updated_at_column_analyse_technical CASCADE;
 
 -- Technical indicators scoring criteria
 
 -- Create the table
-CREATE TABLE IF NOT EXISTS {table} (
+CREATE TABLE IF NOT EXISTS analyse_technical (
     id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,
     
@@ -29,22 +29,22 @@ CREATE TABLE IF NOT EXISTS {table} (
 );
 
 -- Add column comments
-COMMENT ON COLUMN {table}.trading_volume_score IS '15 points - >$1M in first 24h on another exchange';
-COMMENT ON COLUMN {table}.liquidity_score IS '15 points - Tight spread (<0.5%), deep order book';
-COMMENT ON COLUMN {table}.whale_transactions_score IS '10 points - >50% whale buys, no mass sell-offs';
-COMMENT ON COLUMN {table}.token_distribution_score IS '10 points - No single wallet holding >10%';
-COMMENT ON COLUMN {table}.smart_contract_audit_score IS '10 points - Certik/SlowMist audit, no vulnerabilities';
-COMMENT ON COLUMN {table}.pre_sale_vesting_score IS '10 points - No major unlocks in next 30 days';
+COMMENT ON COLUMN analyse_technical.trading_volume_score IS '15 points - >$1M in first 24h on another exchange';
+COMMENT ON COLUMN analyse_technical.liquidity_score IS '15 points - Tight spread (<0.5%), deep order book';
+COMMENT ON COLUMN analyse_technical.whale_transactions_score IS '10 points - >50% whale buys, no mass sell-offs';
+COMMENT ON COLUMN analyse_technical.token_distribution_score IS '10 points - No single wallet holding >10%';
+COMMENT ON COLUMN analyse_technical.smart_contract_audit_score IS '10 points - Certik/SlowMist audit, no vulnerabilities';
+COMMENT ON COLUMN analyse_technical.pre_sale_vesting_score IS '10 points - No major unlocks in next 30 days';
 
 -- Add comments for applicability flags
-COMMENT ON COLUMN {table}.pre_sale_vesting_applicable IS 'Flag indicating if pre-sale vesting indicator is applicable to this cryptocurrency';
-COMMENT ON COLUMN {table}.smart_contract_audit_applicable IS 'Flag indicating if smart contract audit indicator is applicable to this cryptocurrency';
+COMMENT ON COLUMN analyse_technical.pre_sale_vesting_applicable IS 'Flag indicating if pre-sale vesting indicator is applicable to this cryptocurrency';
+COMMENT ON COLUMN analyse_technical.smart_contract_audit_applicable IS 'Flag indicating if smart contract audit indicator is applicable to this cryptocurrency';
 
 -- Create indexes
-CREATE INDEX IF NOT EXISTS idx_{table}_symbol ON {table}(symbol);
+CREATE INDEX IF NOT EXISTS idx_analyse_technical_symbol ON analyse_technical(symbol);
 
 -- Create trigger function to auto-update updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column_{table}()
+CREATE OR REPLACE FUNCTION update_updated_at_column_analyse_technical()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -53,7 +53,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Attach trigger to table
-CREATE TRIGGER set_updated_at_{table}
-BEFORE UPDATE ON {table}
+CREATE TRIGGER set_updated_at_analyse_technical
+BEFORE UPDATE ON analyse_technical
 FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column_{table}();
+EXECUTE FUNCTION update_updated_at_column_analyse_technical();
