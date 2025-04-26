@@ -12,9 +12,15 @@ from .db import DBConnection
 from pathlib import Path
 
 def ensure_cronjobs_table_exists():
-    sql_path = Path(__file__).parent.parent / "sql" / "create_cronjobs_table.sql"
-    with open(sql_path) as f:
-        cronjobs_table_sql = f.read()
+    # Create the cronjobs table directly with SQL instead of loading from a file
+    cronjobs_table_sql = """
+    CREATE TABLE IF NOT EXISTS cronjobs (
+        id SERIAL PRIMARY KEY,
+        schedule TEXT NOT NULL,
+        command TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    """
     with DBConnection() as conn:
         with conn.cursor() as cur:
             cur.execute(cronjobs_table_sql)

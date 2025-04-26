@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 def create_analysis_view():
     """
     Create the analysis_summary view if it doesn't exist.
+    The view is now created by Docker initialization scripts, but this function
+    is kept for backward compatibility and to ensure the view exists.
     """
     try:
         with DBConnection() as conn:
@@ -27,9 +29,103 @@ def create_analysis_view():
                 exists = cur.fetchone()[0]
                 
                 if not exists:
-                    # Read SQL file
-                    with open("sql/create_analysis_view.sql", "r") as f:
-                        sql = f.read()
+                    # Create the view directly with SQL
+                    sql = """
+                    CREATE OR REPLACE VIEW analysis_summary AS
+                    SELECT 
+                        t.symbol,
+                        t.trading_volume_score,
+                        t.liquidity_score,
+                        t.whale_transactions_score,
+                        t.token_distribution_score,
+                        t.pre_sale_vesting_score,
+                        t.smart_contract_audit_score,
+                        s.social_volume_score,
+                        s.sentiment_analysis_score,
+                        s.developer_activity_score,
+                        s.community_growth_score,
+                        COALESCE(t.trading_volume_score, 0) + 
+                        COALESCE(t.liquidity_score, 0) + 
+                        COALESCE(t.whale_transactions_score, 0) + 
+                        COALESCE(t.token_distribution_score, 0) + 
+                        COALESCE(t.pre_sale_vesting_score, 0) + 
+                        COALESCE(t.smart_contract_audit_score, 0) AS total_technical_score,
+                        COALESCE(s.social_volume_score, 0) + 
+                        COALESCE(s.sentiment_analysis_score, 0) + 
+                        COALESCE(s.developer_activity_score, 0) + 
+                        COALESCE(s.community_growth_score, 0) AS total_social_score,
+                        (COALESCE(t.trading_volume_score, 0) + 
+                        COALESCE(t.liquidity_score, 0) + 
+                        COALESCE(t.whale_transactions_score, 0) + 
+                        COALESCE(t.token_distribution_score, 0) + 
+                        COALESCE(t.pre_sale_vesting_score, 0) + 
+                        COALESCE(t.smart_contract_audit_score, 0) +
+                        COALESCE(s.social_volume_score, 0) + 
+                        COALESCE(s.sentiment_analysis_score, 0) + 
+                        COALESCE(s.developer_activity_score, 0) + 
+                        COALESCE(s.community_growth_score, 0)) AS total_score,
+                        CASE 
+                            WHEN (COALESCE(t.trading_volume_score, 0) + 
+                                COALESCE(t.liquidity_score, 0) + 
+                                COALESCE(t.whale_transactions_score, 0) + 
+                                COALESCE(t.token_distribution_score, 0) + 
+                                COALESCE(t.pre_sale_vesting_score, 0) + 
+                                COALESCE(t.smart_contract_audit_score, 0) +
+                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.sentiment_analysis_score, 0) + 
+                                COALESCE(s.developer_activity_score, 0) + 
+                                COALESCE(s.community_growth_score, 0)) >= 70 THEN 'Strong Buy'
+                            WHEN (COALESCE(t.trading_volume_score, 0) + 
+                                COALESCE(t.liquidity_score, 0) + 
+                                COALESCE(t.whale_transactions_score, 0) + 
+                                COALESCE(t.token_distribution_score, 0) + 
+                                COALESCE(t.pre_sale_vesting_score, 0) + 
+                                COALESCE(t.smart_contract_audit_score, 0) +
+                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.sentiment_analysis_score, 0) + 
+                                COALESCE(s.developer_activity_score, 0) + 
+                                COALESCE(s.community_growth_score, 0)) >= 50 THEN 'Buy'
+                            WHEN (COALESCE(t.trading_volume_score, 0) + 
+                                COALESCE(t.liquidity_score, 0) + 
+                                COALESCE(t.whale_transactions_score, 0) + 
+                                COALESCE(t.token_distribution_score, 0) + 
+                                COALESCE(t.pre_sale_vesting_score, 0) + 
+                                COALESCE(t.smart_contract_audit_score, 0) +
+                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.sentiment_analysis_score, 0) + 
+                                COALESCE(s.developer_activity_score, 0) + 
+                                COALESCE(s.community_growth_score, 0)) >= 30 THEN 'Hold'
+                            ELSE 'Sell'
+                        END AS recommendation,
+                        CASE 
+                            WHEN (COALESCE(t.trading_volume_score, 0) + 
+                                COALESCE(t.liquidity_score, 0) + 
+                                COALESCE(t.whale_transactions_score, 0) + 
+                                COALESCE(t.token_distribution_score, 0) + 
+                                COALESCE(t.pre_sale_vesting_score, 0) + 
+                                COALESCE(t.smart_contract_audit_score, 0) +
+                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.sentiment_analysis_score, 0) + 
+                                COALESCE(s.developer_activity_score, 0) + 
+                                COALESCE(s.community_growth_score, 0)) = 0 THEN 0
+                            ELSE 
+                                ROUND(((COALESCE(t.trading_volume_score, 0) + 
+                                COALESCE(t.liquidity_score, 0) + 
+                                COALESCE(t.whale_transactions_score, 0) + 
+                                COALESCE(t.token_distribution_score, 0) + 
+                                COALESCE(t.pre_sale_vesting_score, 0) + 
+                                COALESCE(t.smart_contract_audit_score, 0) +
+                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.sentiment_analysis_score, 0) + 
+                                COALESCE(s.developer_activity_score, 0) + 
+                                COALESCE(s.community_growth_score, 0)) / 100.0) * 100, 2)
+                        END AS score_percentage,
+                        GREATEST(t.updated_at, s.updated_at) AS updated_at
+                    FROM 
+                        analyse_technical t
+                    LEFT JOIN 
+                        analyse_social s ON t.symbol = s.symbol;
+                    """
                     
                     # Execute SQL
                     cur.execute(sql)

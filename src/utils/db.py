@@ -48,49 +48,11 @@ class DBConnection:
 
 def create_tables():
     """
-    Create all necessary tables if they do not exist.
+    Tables are now created by Docker initialization scripts.
+    This function is kept as a stub for backward compatibility.
     """
-    # Create coins table
-    table = os.getenv('POSTGRES_TABLE')
-    sql_path = Path(__file__).parent.parent / "sql" / "create_coins_table.sql"
-    with open(sql_path) as f:
-        create_query = f.read().format(table=table)
-    drop_query = f"DROP TABLE IF EXISTS {table} CASCADE;"
-    
-    # Create technical analysis table
-    technical_table = os.getenv('POSTGRES_ANALYSIS_TABLE', 'analyse_technical')
-    technical_sql_path = Path(__file__).parent.parent / "sql" / "create_analyse_technical.sql"
-    with open(technical_sql_path) as f:
-        technical_create_query = f.read().format(table=technical_table)
-    technical_drop_query = f"DROP TABLE IF EXISTS {technical_table} CASCADE;"
-    
-    # Create social analysis table
-    social_table = os.getenv('POSTGRES_SOCIAL_TABLE', 'analyse_social')
-    social_sql_path = Path(__file__).parent.parent / "sql" / "create_analyse_social.sql"
-    with open(social_sql_path) as f:
-        social_create_query = f.read().format(table=social_table)
-    social_drop_query = f"DROP TABLE IF EXISTS {social_table} CASCADE;"
-    
-    with DBConnection() as conn:
-        with conn.cursor() as cur:
-            # Create technical analysis table
-            cur.execute(technical_drop_query)
-            cur.execute(technical_create_query)
-            
-            # Create social analysis table
-            cur.execute(social_drop_query)
-            cur.execute(social_create_query)
-            
-            # Create or update the analysis_summary view (after indicator tables, before coins table)
-            analysis_view_sql_path = Path(__file__).parent.parent / "sql" / "create_analysis_view.sql"
-            with open(analysis_view_sql_path) as f:
-                analysis_view_query = f.read()
-            cur.execute(analysis_view_query)
-            
-            # Create coins table
-            cur.execute(drop_query)
-            cur.execute(create_query)
-        conn.commit()
+    # All table creation is now handled by Docker initialization
+    pass
 
 def insert_new_coins(coins):
     """

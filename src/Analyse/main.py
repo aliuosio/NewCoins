@@ -35,8 +35,8 @@ from Analyse.Social import (
 )
 from Analyse.indicator_runner import IndicatorRunner
 from utils.db import create_tables
-from utils.analysis_db import create_technical_indicators_table, save_analysis_results, get_latest_analysis, save_analysis_results_batch
-from utils.social_db import create_social_indicators_table, save_social_results, get_latest_social, save_social_results_batch
+from utils.analysis_db import save_analysis_results, get_latest_analysis, save_analysis_results_batch
+from utils.social_db import save_social_results, get_latest_social, save_social_results_batch
 from utils.analysis_view import create_analysis_view
 
 # Configure logging
@@ -223,8 +223,6 @@ def main():
     # Ensure DB tables exist
     if not check_table_exists('analyse_technical'):
         create_tables()
-        create_technical_indicators_table()
-        create_social_indicators_table()
         create_analysis_view()
 
     parser = argparse.ArgumentParser(description='PumpAndDump application')
