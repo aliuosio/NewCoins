@@ -38,7 +38,6 @@ export const useIndicators = (
   useEffect(() => {
     // Don't fetch if symbol is empty or too short
     if (!symbol || symbol.length < 1) {
-      console.log('Skipping indicators fetch - empty or invalid token');
       return;
     }
 
@@ -55,13 +54,10 @@ export const useIndicators = (
       setLoading(true);
       setError(null);
 
-      console.log(`Fetching indicators for token: ${symbol} (attempt ${retryCount + 1})`);
-      
       fetch(`/api/indicators?token=${symbol}`)
         .then(res => {
           if (!isMounted) return null;
           
-          console.log(`Indicators API response status: ${res.status}`);
           if (!res.ok) {
             throw new Error(`HTTP error! Status: ${res.status}`);
           }
@@ -117,11 +113,8 @@ export const useIndicators = (
       .catch(err => {
         if (!isMounted) return;
         
-        console.error('Error fetching indicators:', err);
-        
         // Implement retry logic
         if (retryCount < maxRetries) {
-          console.log(`Retrying indicators fetch (${retryCount + 1}/${maxRetries})...`);
           retryCount++;
           setTimeout(fetchData, 1000); // Retry after 1 second
           return;
@@ -149,7 +142,6 @@ export const useIndicators = (
     
     // Cleanup function
     return () => {
-      console.log(`Cleaning up indicators fetch for token: ${currentSymbol}`);
       isMounted = false;
     };
   }, [symbol, technicalLabels, socialLabels]);
