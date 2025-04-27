@@ -139,7 +139,7 @@ export default function Home() {
           {/* Right: Cronjobs button */}
           <div className="flex flex-row items-center gap-3 justify-end w-full sm:w-auto">
             <button
-              className="w-full max-w-[220px] bg-[#242424] text-[#FF6A00] text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-center focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors mt-3 sm:mt-0"
+              className="w-full max-w-[220px] bg-[#242424] text-[#FF6A00] text-base sm:text-lg lg:text-xl rounded-lg px-4 py-2 flex items-center justify-center focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors mt-3 sm:mt-0 uppercase"
               style={{ minHeight: '44px' }}
               onClick={() => setShowCronjobsModal(true)}
             >

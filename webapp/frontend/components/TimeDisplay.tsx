@@ -24,7 +24,7 @@ const TimeDisplay: FC<TimeDisplayProps> = ({ label, timestamp, className = '' })
 
   return (
     <div className={`text-base sm:text-base lg:text-lg ${className}`}>
-      <span className="text-[#FF6A00]">{label}:</span>{' '}
+      <span className="text-[#FF6A00] uppercase">{label}:</span>{' '}
       <span className="text-[#2DE282]">{formattedTime}</span>
     </div>
   );
