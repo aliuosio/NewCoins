@@ -36,20 +36,31 @@ export const useIndicators = (
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Don't fetch if symbol is empty
     if (!symbol) return;
 
-    setLoading(true);
-    setError(null);
+    let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    const fetchData = () => {
+      if (!isMounted) return;
+      
+      setLoading(true);
+      setError(null);
 
-    console.log(`Fetching indicators for token: ${symbol}`);
-    fetch(`/api/indicators?token=${symbol}`)
-      .then(res => {
-        console.log(`Indicators API response status: ${res.status}`);
-        if (!res.ok) {
-          throw new Error(`HTTP error! Status: ${res.status}`);
-        }
-        return res.json();
-      })
+      console.log(`Fetching indicators for token: ${symbol} (attempt ${retryCount + 1})`);
+      
+      fetch(`/api/indicators?token=${symbol}`)
+        .then(res => {
+          if (!isMounted) return null;
+          
+          console.log(`Indicators API response status: ${res.status}`);
+          if (!res.ok) {
+            throw new Error(`HTTP error! Status: ${res.status}`);
+          }
+          return res.json();
+        })
       .then(responseData => {
         // Process technical indicators
         let technical = (responseData.technical || [])
@@ -98,12 +109,42 @@ export const useIndicators = (
         });
       })
       .catch(err => {
+        if (!isMounted) return;
+        
         console.error('Error fetching indicators:', err);
+        
+        // Implement retry logic
+        if (retryCount < maxRetries) {
+          console.log(`Retrying indicators fetch (${retryCount + 1}/${maxRetries})...`);
+          retryCount++;
+          setTimeout(fetchData, 1000); // Retry after 1 second
+          return;
+        }
+        
         setError(err.message || 'Failed to fetch indicators');
+        // Provide fallback data when all retries fail
+        setData({
+          technical: technicalLabels.map(name => ({ name, value: 0, max: 10 })),
+          social: socialLabels.map(name => ({ name, value: 0, max: 10 })),
+          totalScore: 0,
+          recommendation: '',
+          recommendationDesc: ''
+        });
       })
       .finally(() => {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       });
+    };
+    
+    // Start the fetch process
+    fetchData();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [symbol, technicalLabels, socialLabels]);
 
   return { data, loading, error };
