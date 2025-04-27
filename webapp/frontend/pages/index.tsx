@@ -12,18 +12,6 @@ interface CoinDropdownProps {
 }
 
 const CoinDropdown: FC<CoinDropdownProps> = ({ selectedToken, analysedCoins, onSelect, onToggleDropdown, showDropdown, loading }) => {
-  const [imeStart, setImeStart] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fetch time_start data when token changes
-    if (selectedToken) {
-      fetch(`/api/coin_start_time/${selectedToken}`)
-        .then(res => res.json())
-        .then(data => setImeStart(data.time_start || null))
-        .catch(() => setImeStart(null));
-    }
-  }, [selectedToken]);
-
   return (
     <div className="flex flex-col items-start w-[220px] gap-2">
       <div className="relative w-full max-w-[220px]">
@@ -53,12 +41,6 @@ const CoinDropdown: FC<CoinDropdownProps> = ({ selectedToken, analysedCoins, onS
           </div>
         )}
       </div>
-      {/* Display time_start if available */}
-      {imeStart && (
-        <div className="text-[#FF6A00] text-sm sm:text-base text-center px-4 py-1 rounded-lg bg-[#242424]">
-          Time Start: {imeStart}
-        </div>
-      )}
     </div>
   );
 };
@@ -67,6 +49,19 @@ export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedToken, setSelectedToken] = useState('BTC');
+
+  const [coinData, setCoinData] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (selectedToken) {
+      fetch(`/api/coin/${selectedToken}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => setCoinData(data))
+        .catch(() => setCoinData(null));
+    } else {
+      setCoinData(null);
+    }
+  }, [selectedToken]);
 
   const [showCronjobs, setShowCronjobs] = useState(false);
   const [cronjobs, setCronjobs] = useState<any[]>([]);
@@ -186,14 +181,23 @@ export default function Home() {
           {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
           <div className="flex flex-row items-start justify-between w-full mb-4 lg:mb-8 gap-4">
             {/* Left: Coin dropdown */}
-            <CoinDropdown
-              selectedToken={selectedToken}
-              analysedCoins={analysedCoins}
-              onSelect={setSelectedToken}
-              onToggleDropdown={() => setShowDropdown(!showDropdown)}
-              showDropdown={showDropdown}
-              loading={loading}
-            />
+            <div className="flex flex-col items-start">
+              <CoinDropdown
+                selectedToken={selectedToken}
+                analysedCoins={analysedCoins}
+                onSelect={setSelectedToken}
+                onToggleDropdown={() => setShowDropdown(!showDropdown)}
+                showDropdown={showDropdown}
+                loading={loading}
+              />
+
+              {/* Display time_start if available and not null, directly under dropdown */}
+              {coinData && coinData.time_start && (
+                <div className="text-[#FF6A00] text-base px-4 py-1 rounded-lg bg-[#242424] mt-2">
+                  Time Start: {coinData.time_start}
+                </div>
+              )}
+            </div>
             {/* Center: Big percent and claim stacked */}
             <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
               <span className={`text-2xl sm:text-3xl lg:text-5xl text-center mx-auto ${recommendationColor[recommendation] || 'text-[#2DE282]'}`}
