@@ -33,35 +33,72 @@ export default function Home() {
   // State for UI controls
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCronjobsModal, setShowCronjobsModal] = useState(false);
-  const [selectedToken, setSelectedToken] = useState('');
-
-  // Custom hooks for data fetching
-  const { coins: analysedCoins, initialCoin, loading: coinsLoading } = useAnalysedCoins();
   
-  // State for the active token to prevent re-renders
-  const [activeToken, setActiveToken] = useState<string>('');
+  // Token selection state
+  const [selectedToken, setSelectedToken] = useState<string>('GOLD'); // Default to GOLD
   
-  // Set initial token and active token only when they change
-  useEffect(() => {
-    // Only update if we have an initialCoin and no selectedToken
-    if (!selectedToken && initialCoin && initialCoin !== activeToken) {
-      setSelectedToken(initialCoin);
-      setActiveToken(initialCoin);
-    } else if (selectedToken && selectedToken !== activeToken) {
-      // Update activeToken when selectedToken changes
-      setActiveToken(selectedToken);
-    }
-  }, [initialCoin, selectedToken, activeToken]);
+  // Helper function to get recommendation based on score
+  const getRecommendation = (score: number) => {
+    if (score >= 50) return { recommendation: 'BUY', description: 'Good potential for growth' };
+    else if (score >= 40) return { recommendation: 'HOLD', description: 'Moderate potential' };
+    else if (score >= 30) return { recommendation: 'WATCH', description: 'Some concerns' };
+    else if (score >= 20) return { recommendation: 'AVOID', description: 'Significant concerns' };
+    else return { recommendation: '', description: '' };
+  };
   
-  // Fetch data with stable references
-  const { data: coinData } = useCoinData(activeToken);
-  const { data: indicatorsData, loading: indicatorsLoading } = useIndicators(
-    activeToken,
-    TECHNICAL_LABELS,
-    SOCIAL_LABELS
-  );
+  // Data states
+  const [coinData, setCoinData] = useState<any>(null);
+  const [indicatorsData, setIndicatorsData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   
+  // Get available coins
+  const { coins: analysedCoins } = useAnalysedCoins();
+  
+  // Cronjobs data
   const { cronjobs, loading: cronjobsLoading } = useCronjobs(showCronjobsModal);
+  
+  // Handle token selection
+  const handleTokenSelect = (token: string) => {
+    if (token !== selectedToken) {
+      setSelectedToken(token);
+    }
+  };
+  
+  // Fetch data when token changes
+  useEffect(() => {
+    if (!selectedToken) return;
+    
+    let isMounted = true;
+    setLoading(true);
+    
+    // Fetch coin data
+    fetch(`/api/coin/${selectedToken}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (isMounted) setCoinData(data);
+      })
+      .catch(() => {
+        if (isMounted) setCoinData(null);
+      });
+    
+    // Fetch indicators data
+    fetch(`/api/indicators?token=${selectedToken}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (isMounted) {
+          setIndicatorsData(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIndicatorsData(null);
+          setLoading(false);
+        }
+      });
+    
+    return () => { isMounted = false; };
+  }, [selectedToken]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#121212] font-inter px-2 sm:px-4">
@@ -73,10 +110,10 @@ export default function Home() {
             <CoinDropdown
               selectedToken={selectedToken}
               analysedCoins={analysedCoins}
-              onSelect={setSelectedToken}
+              onSelect={handleTokenSelect}
               onToggleDropdown={() => setShowDropdown(!showDropdown)}
               showDropdown={showDropdown}
-              loading={indicatorsLoading}
+              loading={loading}
             />
             
             {/* Display time_start if available */}
@@ -92,10 +129,10 @@ export default function Home() {
           {/* Center: Score display */}
           {indicatorsData && (
             <ScoreDisplay 
-              score={indicatorsData.totalScore}
-              recommendation={indicatorsData.recommendation}
-              recommendationDesc={indicatorsData.recommendationDesc}
-              selectedToken={selectedToken || initialCoin}
+              score={indicatorsData.score_percentage || 0}
+              recommendation={getRecommendation(indicatorsData.score_percentage || 0).recommendation}
+              recommendationDesc={getRecommendation(indicatorsData.score_percentage || 0).description}
+              selectedToken={selectedToken}
             />
           )}
           
@@ -118,7 +155,7 @@ export default function Home() {
             <IndicatorSection 
               title="Technical"
               indicators={indicatorsData.technical}
-              loading={indicatorsLoading}
+              loading={loading}
             />
           )}
           
@@ -127,7 +164,7 @@ export default function Home() {
             <IndicatorSection 
               title="Social"
               indicators={indicatorsData.social}
-              loading={indicatorsLoading}
+              loading={loading}
             />
           )}
         </div>
