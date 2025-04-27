@@ -23,7 +23,7 @@ const TimeDisplay: FC<TimeDisplayProps> = ({ label, timestamp, className = '' })
   });
 
   return (
-    <div className={`text-[#FF6A00] text-base ${className}`}>
+    <div className={`text-[#2DE282] text-base ${className}`}>
       {label}: {formattedTime}
     </div>
   );
