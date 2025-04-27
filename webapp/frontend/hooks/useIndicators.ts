@@ -36,12 +36,18 @@ export const useIndicators = (
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Don't fetch if symbol is empty
-    if (!symbol) return;
+    // Don't fetch if symbol is empty or too short
+    if (!symbol || symbol.length < 1) {
+      console.log('Skipping indicators fetch - empty or invalid token');
+      return;
+    }
 
     let isMounted = true;
     let retryCount = 0;
     const maxRetries = 2;
+    
+    // Store the current symbol to compare in the cleanup
+    const currentSymbol = symbol;
     
     const fetchData = () => {
       if (!isMounted) return;
@@ -143,6 +149,7 @@ export const useIndicators = (
     
     // Cleanup function
     return () => {
+      console.log(`Cleaning up indicators fetch for token: ${currentSymbol}`);
       isMounted = false;
     };
   }, [symbol, technicalLabels, socialLabels]);

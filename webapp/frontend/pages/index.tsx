@@ -38,19 +38,25 @@ export default function Home() {
   // Custom hooks for data fetching
   const { coins: analysedCoins, initialCoin, loading: coinsLoading } = useAnalysedCoins();
   
-  // Set initial token if not already set and we have an initialCoin
+  // State for the active token to prevent re-renders
+  const [activeToken, setActiveToken] = useState<string>('');
+  
+  // Set initial token and active token only when they change
   useEffect(() => {
-    if (!selectedToken && initialCoin) {
+    // Only update if we have an initialCoin and no selectedToken
+    if (!selectedToken && initialCoin && initialCoin !== activeToken) {
       setSelectedToken(initialCoin);
+      setActiveToken(initialCoin);
+    } else if (selectedToken && selectedToken !== activeToken) {
+      // Update activeToken when selectedToken changes
+      setActiveToken(selectedToken);
     }
-  }, [initialCoin, selectedToken]);
+  }, [initialCoin, selectedToken, activeToken]);
   
-  // Only fetch data when we have a valid token
-  const activeToken = selectedToken || initialCoin;
-  const { data: coinData } = useCoinData(activeToken || '');
-  
+  // Fetch data with stable references
+  const { data: coinData } = useCoinData(activeToken);
   const { data: indicatorsData, loading: indicatorsLoading } = useIndicators(
-    activeToken || '',
+    activeToken,
     TECHNICAL_LABELS,
     SOCIAL_LABELS
   );
