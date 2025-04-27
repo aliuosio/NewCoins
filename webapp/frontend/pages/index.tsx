@@ -193,8 +193,16 @@ export default function Home() {
 
               {/* Display time_start if available and not null, directly under dropdown */}
               {coinData && coinData.time_start && (
-                <div className="text-[#FF6A00] text-base px-4 py-1 rounded-lg bg-[#242424] mt-2">
-                  Time Start: {coinData.time_start}
+                <div className="text-[#FF6A00] text-base mt-2">
+                  Time Start: {new Date(coinData.time_start).toLocaleString('de-DE', {
+                    timeZone: 'Europe/Berlin',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  })}
                 </div>
               )}
             </div>
