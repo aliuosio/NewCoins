@@ -1,11 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, FC } from 'react';
 import { IndicatorList, Indicator } from '../components/IndicatorList';
 import { formatCronjobDate } from '../utils/formatCronjobDate';
+
+interface CoinDropdownProps {
+  selectedToken: string;
+  analysedCoins: string[];
+  onSelect: (token: string) => void;
+  onToggleDropdown: () => void;
+  showDropdown: boolean;
+  loading: boolean;
+}
+
+const CoinDropdown: FC<CoinDropdownProps> = ({ selectedToken, analysedCoins, onSelect, onToggleDropdown, showDropdown, loading }) => {
+  return (
+    <div className="flex flex-col items-start w-[220px] gap-2">
+      <div className="relative w-full max-w-[220px]">
+        <button
+          className="w-full bg-[#242424] text-[#FF6A00] text-base sm:text-lg rounded-lg px-4 py-2 flex items-center justify-center focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
+          style={{ minHeight: '44px' }}
+          onClick={onToggleDropdown}
+          type="button"
+        >
+          <span className="flex items-center justify-center gap-2 w-full">
+            {selectedToken}
+            <svg className="w-4 h-4 text-[#FF6A00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </span>
+        </button>
+        {showDropdown && (
+          <div className="absolute z-10 w-full coin-dropdown-menu rounded-lg shadow-lg mt-2 max-h-60 overflow-auto border border-[#333]">
+            {analysedCoins.map(symbol => (
+              <div
+                key={symbol}
+                className={`w-full px-4 py-2 text-base sm:text-lg flex items-center justify-center cursor-pointer rounded-lg transition-colors ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00]' : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'}`}
+                style={{ minHeight: '44px' }}
+                onClick={() => { onSelect(symbol); onToggleDropdown(); }}
+              >
+                {symbol}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function Home() {
   const [analysedCoins, setAnalysedCoins] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedToken, setSelectedToken] = useState('BTC');
+
+  const [coinData, setCoinData] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (selectedToken) {
+      fetch(`/api/coin/${selectedToken}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => setCoinData(data))
+        .catch(() => setCoinData(null));
+    } else {
+      setCoinData(null);
+    }
+  }, [selectedToken]);
 
   const [showCronjobs, setShowCronjobs] = useState(false);
   const [cronjobs, setCronjobs] = useState<any[]>([]);
@@ -125,34 +181,30 @@ export default function Home() {
           {/* Responsive header layout: horizontal on desktop, stacked/centered on mobile */}
           <div className="flex flex-row items-start justify-between w-full mb-4 lg:mb-8 gap-4">
             {/* Left: Coin dropdown */}
-            <div className="flex flex-col items-start w-[220px] gap-2">
-              <div className="relative w-full max-w-[220px]">
-                <button
-                  className="w-full bg-[#242424] text-[#FF6A00] text-base sm:text-lg rounded-lg px-4 py-2 flex items-center justify-center focus:outline-none border-2 border-transparent focus:border-transparent hover:border-transparent active:border-transparent transition-colors"
-                  style={{ minHeight: '44px' }}
-                  onClick={() => setShowDropdown(d => !d)}
-                  type="button"
-                >
-                  <span className="flex items-center justify-center gap-2 w-full">
-                    {selectedToken}
-                    <svg className="w-4 h-4 text-[#FF6A00]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                  </span>
-                </button>
-                {showDropdown && (
-                  <div className="absolute z-10 w-full coin-dropdown-menu rounded-lg shadow-lg mt-2 max-h-60 overflow-auto border border-[#333]">
-                    {analysedCoins.map(symbol => (
-                      <div
-                        key={symbol}
-                        className={`w-full px-4 py-2 text-base sm:text-lg flex items-center justify-center cursor-pointer rounded-lg transition-colors ${symbol === selectedToken ? 'bg-[#333] text-[#FF6A00]' : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'}`}
-                        style={{ minHeight: '44px' }}
-                        onClick={() => { setSelectedToken(symbol); setShowDropdown(false); }}
-                      >
-                        {symbol}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+            <div className="flex flex-col items-start">
+              <CoinDropdown
+                selectedToken={selectedToken}
+                analysedCoins={analysedCoins}
+                onSelect={setSelectedToken}
+                onToggleDropdown={() => setShowDropdown(!showDropdown)}
+                showDropdown={showDropdown}
+                loading={loading}
+              />
+
+              {/* Display time_start if available and not null, directly under dropdown */}
+              {coinData && coinData.time_start && (
+                <div className="text-[#FF6A00] text-base mt-2">
+                  Time Start: {new Date(coinData.time_start).toLocaleString('de-DE', {
+                    timeZone: 'Europe/Berlin',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                  })}
+                </div>
+              )}
             </div>
             {/* Center: Big percent and claim stacked */}
             <div className="flex flex-col items-center justify-center flex-1 gap-2 mx-2 text-center">
@@ -279,4 +331,3 @@ export default function Home() {
     </>
   );
 }
-
