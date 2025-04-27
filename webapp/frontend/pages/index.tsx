@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Indicator } from '../components/IndicatorList';
 import CoinDropdown from '../components/CoinDropdown';
 import TimeDisplay from '../components/TimeDisplay';
@@ -36,19 +36,26 @@ export default function Home() {
   const [selectedToken, setSelectedToken] = useState('');
 
   // Custom hooks for data fetching
-  const { coins: analysedCoins, initialCoin } = useAnalysedCoins();
-  const { data: coinData } = useCoinData(selectedToken || initialCoin);
+  const { coins: analysedCoins, initialCoin, loading: coinsLoading } = useAnalysedCoins();
+  
+  // Set initial token if not already set and we have an initialCoin
+  useEffect(() => {
+    if (!selectedToken && initialCoin) {
+      setSelectedToken(initialCoin);
+    }
+  }, [initialCoin, selectedToken]);
+  
+  // Only fetch data when we have a valid token
+  const activeToken = selectedToken || initialCoin;
+  const { data: coinData } = useCoinData(activeToken || '');
+  
   const { data: indicatorsData, loading: indicatorsLoading } = useIndicators(
-    selectedToken || initialCoin,
+    activeToken || '',
     TECHNICAL_LABELS,
     SOCIAL_LABELS
   );
+  
   const { cronjobs, loading: cronjobsLoading } = useCronjobs(showCronjobsModal);
-
-  // Set initial token if not already set and we have an initialCoin
-  if (!selectedToken && initialCoin) {
-    setSelectedToken(initialCoin);
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#121212] font-inter px-2 sm:px-4">

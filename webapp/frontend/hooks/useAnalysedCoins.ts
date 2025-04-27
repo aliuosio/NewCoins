@@ -19,25 +19,37 @@ export const useAnalysedCoins = (): {
     setLoading(true);
     setError(null);
 
+    console.log('Fetching analysed coins...');
     fetch('/api/analysed_coins')
       .then(res => {
+        console.log(`Analysed coins API response status: ${res.status}`);
         if (!res.ok) {
           throw new Error(`HTTP error! Status: ${res.status}`);
         }
         return res.json();
       })
       .then(data => {
+        console.log('Analysed coins data:', data);
         setCoins(data);
         
         // Set initial coin (BTC if available, otherwise first coin)
         if (data && data.length > 0) {
           const defaultCoin = data.includes('BTC') ? 'BTC' : data[0];
+          console.log(`Setting initial coin to: ${defaultCoin}`);
           setInitialCoin(defaultCoin);
+        } else {
+          console.log('No coins available, setting GOLD as fallback');
+          // Fallback to GOLD if no coins are returned
+          setInitialCoin('GOLD');
         }
       })
       .catch(err => {
+        console.error('Error fetching analysed coins:', err);
         setError(err.message || 'Failed to fetch analysed coins');
         setCoins([]);
+        // Fallback to GOLD if there's an error
+        console.log('Error fetching coins, setting GOLD as fallback');
+        setInitialCoin('GOLD');
       })
       .finally(() => {
         setLoading(false);

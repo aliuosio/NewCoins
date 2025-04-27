@@ -41,8 +41,10 @@ export const useIndicators = (
     setLoading(true);
     setError(null);
 
+    console.log(`Fetching indicators for token: ${symbol}`);
     fetch(`/api/indicators?token=${symbol}`)
       .then(res => {
+        console.log(`Indicators API response status: ${res.status}`);
         if (!res.ok) {
           throw new Error(`HTTP error! Status: ${res.status}`);
         }
@@ -96,6 +98,7 @@ export const useIndicators = (
         });
       })
       .catch(err => {
+        console.error('Error fetching indicators:', err);
         setError(err.message || 'Failed to fetch indicators');
       })
       .finally(() => {
