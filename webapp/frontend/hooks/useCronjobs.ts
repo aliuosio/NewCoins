@@ -43,13 +43,15 @@ export const useCronjobs = (shouldFetch: boolean): {
             if (parts.length < 5) return { ...job, _sortDate: null };
             
             const [min, hour, day, month] = parts;
-            const date = new Date(Date.UTC(
+            // Construct date assuming components are in the local timezone intended (Europe/Berlin)
+            // This ensures sorting is based on the local time, not UTC.
+            const date = new Date(
               new Date().getFullYear(),
-              parseInt(month) - 1,
+              parseInt(month) - 1, // Month is 0-indexed
               parseInt(day),
               parseInt(hour),
               parseInt(min)
-            ));
+            );
             return { ...job, _sortDate: date };
           } catch {
             return { ...job, _sortDate: null };

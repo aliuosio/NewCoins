@@ -4,15 +4,17 @@ export function formatCronjobDate(schedule: string): string {
     const parts = schedule.split(' ');
     if (parts.length < 5) throw new Error('Invalid cron format');
     const [min, hour, day, month] = parts;
-    const utcDate = new Date(Date.UTC(
+    // Construct date assuming components are in the local timezone intended (Europe/Berlin)
+    const localDate = new Date(
       new Date().getFullYear(),
-      parseInt(month) - 1,
+      parseInt(month) - 1, // Month is 0-indexed
       parseInt(day),
       parseInt(hour),
       parseInt(min)
-    ));
+    );
+    // Format the date explicitly for Europe/Berlin timezone display
     const formatter = new Intl.DateTimeFormat('de-DE', {
-      timeZone: 'Europe/Berlin',
+      timeZone: 'Europe/Berlin', // Ensure output matches the intended timezone
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -20,8 +22,11 @@ export function formatCronjobDate(schedule: string): string {
       month: '2-digit',
       year: 'numeric',
     });
-    return formatter.format(utcDate) + ' CET';
+    // Append timezone indicator for clarity, adjust if needed (CET/CEST)
+    // Note: Intl.DateTimeFormat handles DST automatically based on the date and timezone.
+    // Manually appending 'CET' might be inaccurate during CEST. Consider removing or using timeZoneName.
+    return formatter.format(localDate); // Removed manual ' CET' suffix
   } catch {
-    return schedule;
+    return schedule; // Return original schedule on error
   }
 }
