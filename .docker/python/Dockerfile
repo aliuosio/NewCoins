@@ -13,12 +13,8 @@ RUN apt update && apt full-upgrade -y && \
     echo 'if [ -f /usr/share/bash-completion/bash_completion ]; then . /usr/share/bash-completion/bash_completion; fi' >> /root/.bashrc
 
 # --- Automate mexc-api-sdk Python install ---
-RUN git clone --depth 1 https://github.com/mxcdevelop/mexc-api-sdk.git /tmp/mexc-api-sdk && \
-    cd /tmp/mexc-api-sdk/dist/python && \
-    if ls mexc_sdk-*-py3-none-any.whl 1> /dev/null 2>&1; then \
-        pip install mexc_sdk-*-py3-none-any.whl; \
-    fi && \
-    cd / && rm -rf /tmp/mexc-api-sdk
-
+RUN git clone https://github.com/mxcdevelop/mexc-api-sdk.git /src/mexc-api-sdk && \
+    cd /src/mexc-api-sdk/dist/python && \
+    tar -xzf mexc-sdk-*.tar.gz
 
 CMD ["cron", "-f"]
