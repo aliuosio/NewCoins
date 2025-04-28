@@ -35,7 +35,7 @@ export default function Home() {
   const [showCronjobsModal, setShowCronjobsModal] = useState(false);
   
   // Token selection state
-  const [selectedToken, setSelectedToken] = useState<string>('GOLD'); // Default to GOLD
+  const [selectedToken, setSelectedToken] = useState<string>(''); // Initialize empty, will be set from hook
   
   // Helper function to get recommendation based on score
   const getRecommendation = (score: number) => {
@@ -52,7 +52,14 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   
   // Get available coins
-  const { coins: analysedCoins } = useAnalysedCoins();
+  const { coins: analysedCoins, initialCoin } = useAnalysedCoins();
+  
+  // Set the selected token when initialCoin changes
+  useEffect(() => {
+    if (initialCoin && initialCoin !== selectedToken) {
+      setSelectedToken(initialCoin);
+    }
+  }, [initialCoin, selectedToken]);
   
   // Cronjobs data
   const { cronjobs, loading: cronjobsLoading } = useCronjobs(showCronjobsModal);

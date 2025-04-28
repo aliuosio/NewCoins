@@ -34,15 +34,15 @@ export const useAnalysedCoins = (): {
           const defaultCoin = data.includes('BTC') ? 'BTC' : data[0];
           setInitialCoin(defaultCoin);
         } else {
-          // Fallback to GOLD if no coins are returned
-          setInitialCoin('GOLD');
+          // No coins available, leave initialCoin empty
+          setInitialCoin('');
         }
       })
       .catch(err => {
         setError(err.message || 'Failed to fetch analysed coins');
         setCoins([]);
-        // Fallback to GOLD if there's an error
-        setInitialCoin('GOLD');
+        // No fallback on error, leave initialCoin empty
+        setInitialCoin('');
       })
       .finally(() => {
         setLoading(false);

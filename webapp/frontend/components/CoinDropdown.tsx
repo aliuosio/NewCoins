@@ -30,7 +30,7 @@ const CoinDropdown: FC<CoinDropdownProps> = ({
         disabled={loading}
       >
         <span className="flex items-center justify-center gap-2 w-full">
-          {selectedToken || 'Select Coin'}
+          {selectedToken || (analysedCoins.length > 0 ? 'Select Coin' : 'No Coins Available')}
           <svg 
             className="w-4 h-4 text-[#2DE282]" 
             fill="none" 
