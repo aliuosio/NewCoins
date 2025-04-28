@@ -40,27 +40,27 @@ calculated_scores AS (
     (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score) as total_technical_score,
     (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score + google_trends_score + sentiment_analysis_score + developer_activity_score + community_growth_score) as total_score
   FROM score_components
-)
+) cs
 SELECT
-  symbol,
-  trading_volume_score,
-  liquidity_score,
-  whale_transactions_score,
-  token_distribution_score,
-  pre_sale_vesting_score,
-  smart_contract_audit_score,
-  google_trends_score,
-  sentiment_analysis_score,
-  developer_activity_score,
-  community_growth_score,
-  total_social_score,
-  total_technical_score,
-  total_score,
-  total_score as score_percentage,
+  cs.symbol,
+  cs.trading_volume_score,
+  cs.liquidity_score,
+  cs.whale_transactions_score,
+  cs.token_distribution_score,
+  cs.pre_sale_vesting_score,
+  cs.smart_contract_audit_score,
+  cs.google_trends_score,
+  cs.sentiment_analysis_score,
+  cs.developer_activity_score,
+  cs.community_growth_score,
+  cs.total_social_score,
+  cs.total_technical_score,
+  cs.total_score,
+  cs.total_score as score_percentage,
   CASE 
-    WHEN total_score >= 50 THEN (SELECT RECOMMEND_BUY_LABEL FROM (SELECT current_setting('RECOMMEND_BUY_LABEL', true) as RECOMMEND_BUY_LABEL) as env) || ' - Good potential for growth'
-    WHEN total_score >= 40 THEN (SELECT RECOMMEND_HOLD_LABEL FROM (SELECT current_setting('RECOMMEND_HOLD_LABEL', true) as RECOMMEND_HOLD_LABEL) as env) || ' - Moderate potential'
-    WHEN total_score >= 30 THEN (SELECT RECOMMEND_WATCH_LABEL FROM (SELECT current_setting('RECOMMEND_WATCH_LABEL', true) as RECOMMEND_WATCH_LABEL) as env) || ' - Some concerns'
+    WHEN cs.total_score >= 50 THEN (SELECT RECOMMEND_BUY_LABEL FROM (SELECT current_setting('RECOMMEND_BUY_LABEL', true) as RECOMMEND_BUY_LABEL) as env) || ' - Good potential for growth'
+    WHEN cs.total_score >= 40 THEN (SELECT RECOMMEND_HOLD_LABEL FROM (SELECT current_setting('RECOMMEND_HOLD_LABEL', true) as RECOMMEND_HOLD_LABEL) as env) || ' - Moderate potential'
+    WHEN cs.total_score >= 30 THEN (SELECT RECOMMEND_WATCH_LABEL FROM (SELECT current_setting('RECOMMEND_WATCH_LABEL', true) as RECOMMEND_WATCH_LABEL) as env) || ' - Some concerns'
     ELSE (SELECT RECOMMEND_AVOID_LABEL FROM (SELECT current_setting('RECOMMEND_AVOID_LABEL', true) as RECOMMEND_AVOID_LABEL) as env) || ' - Significant concerns'
   END as recommendation
 
