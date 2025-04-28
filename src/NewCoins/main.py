@@ -7,6 +7,7 @@ from .interfaces import HTTPClient
 from dataclasses import dataclass
 import sys
 from .implementations import RequestsHTTPClient
+from Trade.connection_pool import MEXCPoolClient
 from typing import Any, List
 import os
 import time
@@ -20,6 +21,7 @@ class NewCoin:
     name: str
     start_time: str
     end_time: str
+    futures: bool = False  # TRUE if coin is listed in futures, default FALSE
 
 
 class NewCoinsFetcher:
@@ -37,6 +39,7 @@ class NewCoinsFetcher:
         else:
             raise ValueError(f"Unexpected API response type: {type(raw)}")
         coins: List[NewCoin] = []
+        pool_client = MEXCPoolClient(start_if_not_running=True)
         for item in items:
             if isinstance(item, dict):
                 symbol = item.get("vcoinName", item.get("symbol"))
@@ -50,11 +53,16 @@ class NewCoinsFetcher:
                 end = ""
             else:
                 continue
+            try:
+                futures_flag = pool_client.futures_contract_exists(symbol)
+            except Exception as e:
+                futures_flag = False
             coins.append(NewCoin(
                 symbol=symbol,
                 name=name,
                 start_time=str(start),
-                end_time=str(end)
+                end_time=str(end),
+                futures=futures_flag
             ))
         return coins
 

@@ -74,15 +74,17 @@ def insert_new_coins(coins):
                 (
                     c.name,
                     c.symbol,
-                    datetime.fromtimestamp(int(c.start_time) / 1000, tz=pytz.utc)
+                    datetime.fromtimestamp(int(c.start_time) / 1000, tz=pytz.utc),
+                    c.futures
                 )
                 for c in coins
             ]
             insert_query = f"""
-            INSERT INTO {table} (name, symbol, time_start)
+            INSERT INTO {table} (name, symbol, time_start, futures)
             VALUES %s
             ON CONFLICT (symbol) DO UPDATE
                 SET name = EXCLUDED.name,
-                    time_start = EXCLUDED.time_start;
+                    time_start = EXCLUDED.time_start,
+                    futures = EXCLUDED.futures;
             """
             execute_values(cur, insert_query, values)
