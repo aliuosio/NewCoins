@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS coins (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,                 -- Full name of the cryptocurrency (e.g., Bitcoin)
     symbol TEXT NOT NULL UNIQUE,        -- Trading symbol (e.g., BTC)
+    futures BOOLEAN NOT NULL DEFAULT FALSE,   -- TRUE if coin is listed in futures, FALSE otherwise
     
     -- Timestamps for tracking
     time_start TIMESTAMPTZ NOT NULL,    -- When tracking of this coin started
