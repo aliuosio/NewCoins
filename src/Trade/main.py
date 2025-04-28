@@ -62,6 +62,7 @@ def main():
         if len(sys.argv) != 3:
             print("Usage: python main.py <buy|sell> <symbol>")
             print("Example: python main.py buy BTC")
+            print("Example: python main.py sell BTC")
             sys.exit(1)
 
         action = sys.argv[1].lower()
@@ -80,8 +81,12 @@ def main():
         # Get pre-order balance
         pre_order_balance = trading_client.get_balance("USDT" if action == "buy" else asset)
 
-        # Place order
-        response = trading_client.place_order(action, symbol, asset)
+        # Place order - always use cached data when available
+        if action == "buy":
+            logger.info(f"Executing market buy for {symbol} (using cached data when available)")
+            response = trading_client.fast_market_buy(symbol)
+        else:
+            response = trading_client.place_order(action, symbol, asset, use_cache=True)
 
         # Get post-order balance
         post_order_balance = trading_client.get_balance("USDT" if action == "buy" else asset)
@@ -95,10 +100,22 @@ def main():
             order_response=response
         )
 
+        # Print summary of the executed order
+        if 'fills' in response:
+            total_qty = sum(float(fill['qty']) for fill in response['fills'])
+            total_cost = sum(float(fill['qty']) * float(fill['price']) for fill in response['fills'])
+            avg_price = total_cost / total_qty if total_qty > 0 else 0
+            print(f"Order filled: {total_qty} {asset} at average price {avg_price} USDT")
+            
         logger.info("Order completed successfully")
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":
+    # Configure basic logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     main()
