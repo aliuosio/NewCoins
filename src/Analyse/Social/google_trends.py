@@ -51,7 +51,8 @@ class GoogleTrendsIndicator(BaseIndicator):
         # Set up cache directory
         self._cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'cache', 'google_trends')
         os.makedirs(self._cache_dir, exist_ok=True)
-        self._cache_duration = 3600  # Cache duration in seconds (1 hour)
+        # Use API_CACHE_DURATION from environment variables
+        self._cache_duration = int(os.getenv('API_CACHE_DURATION', 3600))  # Default to 3600 seconds (1 hour) if not set
         logger.info(f"Using Google Trends cache directory: {self._cache_dir} with {self._cache_duration}s duration")
         
         # Rate limiting settings

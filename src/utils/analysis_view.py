@@ -40,7 +40,7 @@ def create_analysis_view():
                         t.token_distribution_score,
                         t.pre_sale_vesting_score,
                         t.smart_contract_audit_score,
-                        s.social_volume_score,
+                        s.google_trends_score,
                         s.sentiment_analysis_score,
                         s.developer_activity_score,
                         s.community_growth_score,
@@ -50,7 +50,7 @@ def create_analysis_view():
                         COALESCE(t.token_distribution_score, 0) + 
                         COALESCE(t.pre_sale_vesting_score, 0) + 
                         COALESCE(t.smart_contract_audit_score, 0) AS total_technical_score,
-                        COALESCE(s.social_volume_score, 0) + 
+                        COALESCE(s.google_trends_score, 0) + 
                         COALESCE(s.sentiment_analysis_score, 0) + 
                         COALESCE(s.developer_activity_score, 0) + 
                         COALESCE(s.community_growth_score, 0) AS total_social_score,
@@ -60,7 +60,7 @@ def create_analysis_view():
                         COALESCE(t.token_distribution_score, 0) + 
                         COALESCE(t.pre_sale_vesting_score, 0) + 
                         COALESCE(t.smart_contract_audit_score, 0) +
-                        COALESCE(s.social_volume_score, 0) + 
+                        COALESCE(s.google_trends_score, 0) + 
                         COALESCE(s.sentiment_analysis_score, 0) + 
                         COALESCE(s.developer_activity_score, 0) + 
                         COALESCE(s.community_growth_score, 0)) AS total_score,
@@ -71,7 +71,7 @@ def create_analysis_view():
                                 COALESCE(t.token_distribution_score, 0) + 
                                 COALESCE(t.pre_sale_vesting_score, 0) + 
                                 COALESCE(t.smart_contract_audit_score, 0) +
-                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.google_trends_score, 0) + 
                                 COALESCE(s.sentiment_analysis_score, 0) + 
                                 COALESCE(s.developer_activity_score, 0) + 
                                 COALESCE(s.community_growth_score, 0)) >= 70 THEN 'Strong Buy'
@@ -81,7 +81,7 @@ def create_analysis_view():
                                 COALESCE(t.token_distribution_score, 0) + 
                                 COALESCE(t.pre_sale_vesting_score, 0) + 
                                 COALESCE(t.smart_contract_audit_score, 0) +
-                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.google_trends_score, 0) + 
                                 COALESCE(s.sentiment_analysis_score, 0) + 
                                 COALESCE(s.developer_activity_score, 0) + 
                                 COALESCE(s.community_growth_score, 0)) >= 50 THEN 'Buy'
@@ -91,7 +91,7 @@ def create_analysis_view():
                                 COALESCE(t.token_distribution_score, 0) + 
                                 COALESCE(t.pre_sale_vesting_score, 0) + 
                                 COALESCE(t.smart_contract_audit_score, 0) +
-                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.google_trends_score, 0) + 
                                 COALESCE(s.sentiment_analysis_score, 0) + 
                                 COALESCE(s.developer_activity_score, 0) + 
                                 COALESCE(s.community_growth_score, 0)) >= 30 THEN 'Hold'
@@ -104,7 +104,7 @@ def create_analysis_view():
                                 COALESCE(t.token_distribution_score, 0) + 
                                 COALESCE(t.pre_sale_vesting_score, 0) + 
                                 COALESCE(t.smart_contract_audit_score, 0) +
-                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.google_trends_score, 0) + 
                                 COALESCE(s.sentiment_analysis_score, 0) + 
                                 COALESCE(s.developer_activity_score, 0) + 
                                 COALESCE(s.community_growth_score, 0)) = 0 THEN 0
@@ -115,7 +115,7 @@ def create_analysis_view():
                                 COALESCE(t.token_distribution_score, 0) + 
                                 COALESCE(t.pre_sale_vesting_score, 0) + 
                                 COALESCE(t.smart_contract_audit_score, 0) +
-                                COALESCE(s.social_volume_score, 0) + 
+                                COALESCE(s.google_trends_score, 0) + 
                                 COALESCE(s.sentiment_analysis_score, 0) + 
                                 COALESCE(s.developer_activity_score, 0) + 
                                 COALESCE(s.community_growth_score, 0)) / 100.0) * 100, 2)
@@ -168,7 +168,7 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
                     token_distribution_score,
                     pre_sale_vesting_score,
                     smart_contract_audit_score,
-                    social_volume_score,
+                    google_trends_score,
                     sentiment_analysis_score,
                     developer_activity_score,
                     community_growth_score
@@ -198,7 +198,7 @@ def get_latest_analysis(symbol: str, days: int = 30) -> Optional[dict]:
                         "smart_contract_audit": result.smart_contract_audit_score
                     },
                     "social_indicators": {
-                        "social_volume": result.social_volume_score,
+                        "google_trends": result.google_trends_score,
                         "sentiment_analysis": result.sentiment_analysis_score,
                         "developer_activity": result.developer_activity_score,
                         "community_growth": result.community_growth_score
