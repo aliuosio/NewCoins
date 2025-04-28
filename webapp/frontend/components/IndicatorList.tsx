@@ -18,9 +18,10 @@ const iconMap: Record<string, React.ReactNode> = {
   'Token Distribution': <span>📈</span>,
   'Pre-Sale Vesting': <span>📆</span>,
   'Smart Contract Audit': <span>📝</span>,
-  'Social Volume': <span>👥</span>,
+  'Google Trends': <span>🔍</span>,
   'Sentiment Analysis': <span>😊</span>,
-  'Developer Activity': <span>📈</span>,
+  'Developer Activity': <span>👨‍💻</span>,
+  'Community Growth': <span>👥</span>,
 };
 
 export const IndicatorList: React.FC<IndicatorListProps> = ({ indicators, loading }) => {

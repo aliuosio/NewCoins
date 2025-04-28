@@ -1,7 +1,7 @@
 """
 cron_db.py
 Utility functions for managing cronjob records in the PostgreSQL database.
-Ensures the cronjobs table exists before writing new jobs.
+The cronjobs table is created by Docker initialization scripts in .docker/db/import/create_cronjobs_table.sql
 """
 
 import psycopg2
@@ -11,23 +11,8 @@ from .db import DBConnection
 
 from pathlib import Path
 
-def ensure_cronjobs_table_exists():
-    # Create the cronjobs table directly with SQL instead of loading from a file
-    cronjobs_table_sql = """
-    CREATE TABLE IF NOT EXISTS cronjobs (
-        id SERIAL PRIMARY KEY,
-        schedule TEXT NOT NULL,
-        command TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    );
-    """
-    with DBConnection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(cronjobs_table_sql)
-        conn.commit()
-
 def save_cronjob(schedule: str, command: str):
-    ensure_cronjobs_table_exists()
+    # The cronjobs table is created by Docker initialization scripts
     with DBConnection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -37,7 +22,7 @@ def save_cronjob(schedule: str, command: str):
         conn.commit()
 
 def get_cronjobs():
-    ensure_cronjobs_table_exists()
+    # The cronjobs table is created by Docker initialization scripts
     with DBConnection() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, schedule, command, created_at FROM cronjobs ORDER BY created_at DESC")

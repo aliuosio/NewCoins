@@ -9,7 +9,7 @@ def get_indicators(token: str = Query(..., alias="token")):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT trading_volume_score, liquidity_score, whale_transactions_score, token_distribution_score, pre_sale_vesting_score, smart_contract_audit_score,
-                       social_volume_score, sentiment_analysis_score, developer_activity_score, community_growth_score,
+                       google_trends_score, sentiment_analysis_score, developer_activity_score, community_growth_score,
                        total_social_score, total_technical_score, total_score, score_percentage
                 FROM analysis_summary
                 WHERE symbol = %s
@@ -26,9 +26,10 @@ def get_indicators(token: str = Query(..., alias="token")):
                 {"name": "Smart Contract Audit", "value": float(row[5]) if row[5] is not None else 0, "max": 10},
             ]
             social = [
-                {"name": "Social Volume", "value": float(row[6]) if row[6] is not None else 0, "max": 10},
+                {"name": "Google Trends", "value": float(row[6]) if row[6] is not None else 0, "max": 5},
                 {"name": "Sentiment Analysis", "value": float(row[7]) if row[7] is not None else 0, "max": 10},
                 {"name": "Developer Activity", "value": float(row[8]) if row[8] is not None else 0, "max": 10},
+                {"name": "Community Growth", "value": float(row[9]) if row[9] is not None else 0, "max": 5},
             ]
             score_percentage = float(row[13]) if row[13] is not None else None
             total_score = float(row[12]) if row[12] is not None else None

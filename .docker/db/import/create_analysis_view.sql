@@ -12,130 +12,57 @@
 -- Social indicators (30 points total):
 -- google_trends_score: 5 points - Strong uptrend in search interest
 -- sentiment_analysis_score: 10 points - >70% positive sentiment
--- developer_activity_score: 5 points - Trending upwards
+-- developer_activity_score: 10 points - Trending upwards
 -- community_growth_score: 5 points - >500 active members, constant discussion
 
--- Create regular view
+-- Create regular view with optimized structure using CTEs
 CREATE OR REPLACE VIEW analysis_summary AS
-SELECT 
+WITH score_components AS (
+  SELECT 
     t.symbol,
-    
-    -- Technical indicators
-    t.trading_volume_score,
-    t.liquidity_score,
-    t.whale_transactions_score,
-    t.token_distribution_score,
-    t.pre_sale_vesting_score,
-    t.smart_contract_audit_score,
-    
-    -- Social indicators
-    s.google_trends_score,
-    s.sentiment_analysis_score,
-    s.developer_activity_score,
-    s.community_growth_score,
-    
-    -- Calculate total social score (max 30 points)
-    (
-        COALESCE(s.google_trends_score, 0) +
-        COALESCE(s.sentiment_analysis_score, 0) +
-        COALESCE(s.developer_activity_score, 0) +
-        COALESCE(s.community_growth_score, 0)
-    ) as total_social_score,
-    
-    -- Calculate total technical score (max 70 points)
-    (
-        COALESCE(t.trading_volume_score, 0) +
-        COALESCE(t.liquidity_score, 0) +
-        COALESCE(t.whale_transactions_score, 0) +
-        COALESCE(t.token_distribution_score, 0) +
-        COALESCE(t.pre_sale_vesting_score, 0) +
-        COALESCE(t.smart_contract_audit_score, 0)
-    ) as total_technical_score,
-    
-    -- Calculate total score (max 100 points)
-    (
-        COALESCE(t.trading_volume_score, 0) +
-        COALESCE(t.liquidity_score, 0) +
-        COALESCE(t.whale_transactions_score, 0) +
-        COALESCE(t.token_distribution_score, 0) +
-        COALESCE(t.pre_sale_vesting_score, 0) +
-        COALESCE(t.smart_contract_audit_score, 0) +
-        COALESCE(s.google_trends_score, 0) +
-        COALESCE(s.sentiment_analysis_score, 0) +
-        COALESCE(s.developer_activity_score, 0) +
-        COALESCE(s.community_growth_score, 0)
-    ) as total_score,
-    
-    -- Calculate percentage score
-    (
-        (
-            COALESCE(t.trading_volume_score, 0) +
-            COALESCE(t.liquidity_score, 0) +
-            COALESCE(t.whale_transactions_score, 0) +
-            COALESCE(t.token_distribution_score, 0) +
-            COALESCE(t.pre_sale_vesting_score, 0) +
-            COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.google_trends_score, 0) +
-            COALESCE(s.sentiment_analysis_score, 0) +
-            COALESCE(s.developer_activity_score, 0) +
-            COALESCE(s.community_growth_score, 0)
-        ) * 100.0 / 100
-    ) as score_percentage,
-    
-    -- Calculate recommendation category
-    CASE 
-        WHEN (
-            COALESCE(t.trading_volume_score, 0) +
-            COALESCE(t.liquidity_score, 0) +
-            COALESCE(t.whale_transactions_score, 0) +
-            COALESCE(t.token_distribution_score, 0) +
-            COALESCE(t.pre_sale_vesting_score, 0) +
-            COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.google_trends_score, 0) +
-            COALESCE(s.sentiment_analysis_score, 0) +
-            COALESCE(s.developer_activity_score, 0) +
-            COALESCE(s.community_growth_score, 0)
-        ) >= 50 THEN 'BUY - Good potential for growth'
-        WHEN (
-            COALESCE(t.trading_volume_score, 0) +
-            COALESCE(t.liquidity_score, 0) +
-            COALESCE(t.whale_transactions_score, 0) +
-            COALESCE(t.token_distribution_score, 0) +
-            COALESCE(t.pre_sale_vesting_score, 0) +
-            COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.google_trends_score, 0) +
-            COALESCE(s.sentiment_analysis_score, 0) +
-            COALESCE(s.developer_activity_score, 0) +
-            COALESCE(s.community_growth_score, 0)
-        ) >= 40 THEN 'HOLD - Moderate potential'
-        WHEN (
-            COALESCE(t.trading_volume_score, 0) +
-            COALESCE(t.liquidity_score, 0) +
-            COALESCE(t.whale_transactions_score, 0) +
-            COALESCE(t.token_distribution_score, 0) +
-            COALESCE(t.pre_sale_vesting_score, 0) +
-            COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.google_trends_score, 0) +
-            COALESCE(s.sentiment_analysis_score, 0) +
-            COALESCE(s.developer_activity_score, 0) +
-            COALESCE(s.community_growth_score, 0)
-        ) >= 30 THEN 'WATCH - Some concerns'
-        WHEN (
-            COALESCE(t.trading_volume_score, 0) +
-            COALESCE(t.liquidity_score, 0) +
-            COALESCE(t.whale_transactions_score, 0) +
-            COALESCE(t.token_distribution_score, 0) +
-            COALESCE(t.pre_sale_vesting_score, 0) +
-            COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.google_trends_score, 0) +
-            COALESCE(s.sentiment_analysis_score, 0) +
-            COALESCE(s.developer_activity_score, 0) +
-            COALESCE(s.community_growth_score, 0)
-        ) >= 20 THEN 'AVOID - Significant concerns'
-        ELSE 'AVOID - Significant concerns'
-    END as recommendation
-FROM analyse_technical t
-LEFT JOIN analyse_social s ON t.symbol = s.symbol
+    COALESCE(t.trading_volume_score, 0) as trading_volume_score,
+    COALESCE(t.liquidity_score, 0) as liquidity_score,
+    COALESCE(t.whale_transactions_score, 0) as whale_transactions_score,
+    COALESCE(t.token_distribution_score, 0) as token_distribution_score,
+    COALESCE(t.pre_sale_vesting_score, 0) as pre_sale_vesting_score,
+    COALESCE(t.smart_contract_audit_score, 0) as smart_contract_audit_score,
+    COALESCE(s.google_trends_score, 0) as google_trends_score,
+    COALESCE(s.sentiment_analysis_score, 0) as sentiment_analysis_score,
+    COALESCE(s.developer_activity_score, 0) as developer_activity_score,
+    COALESCE(s.community_growth_score, 0) as community_growth_score
+  FROM analyse_technical t
+  LEFT JOIN analyse_social s ON t.symbol = s.symbol
+),
+calculated_scores AS (
+  SELECT 
+    *,
+    (google_trends_score + sentiment_analysis_score + developer_activity_score + community_growth_score) as total_social_score,
+    (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score) as total_technical_score,
+    (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score + google_trends_score + sentiment_analysis_score + developer_activity_score + community_growth_score) as total_score
+  FROM score_components
+)
+SELECT
+  symbol,
+  trading_volume_score,
+  liquidity_score,
+  whale_transactions_score,
+  token_distribution_score,
+  pre_sale_vesting_score,
+  smart_contract_audit_score,
+  google_trends_score,
+  sentiment_analysis_score,
+  developer_activity_score,
+  community_growth_score,
+  total_social_score,
+  total_technical_score,
+  total_score,
+  total_score as score_percentage,
+  CASE 
+    WHEN total_score >= 50 THEN (SELECT RECOMMEND_BUY_LABEL FROM (SELECT current_setting('RECOMMEND_BUY_LABEL', true) as RECOMMEND_BUY_LABEL) as env) || ' - Good potential for growth'
+    WHEN total_score >= 40 THEN (SELECT RECOMMEND_HOLD_LABEL FROM (SELECT current_setting('RECOMMEND_HOLD_LABEL', true) as RECOMMEND_HOLD_LABEL) as env) || ' - Moderate potential'
+    WHEN total_score >= 30 THEN (SELECT RECOMMEND_WATCH_LABEL FROM (SELECT current_setting('RECOMMEND_WATCH_LABEL', true) as RECOMMEND_WATCH_LABEL) as env) || ' - Some concerns'
+    ELSE (SELECT RECOMMEND_AVOID_LABEL FROM (SELECT current_setting('RECOMMEND_AVOID_LABEL', true) as RECOMMEND_AVOID_LABEL) as env) || ' - Significant concerns'
+  END as recommendation
 
 -- Regular views don't need WITH DATA
 
