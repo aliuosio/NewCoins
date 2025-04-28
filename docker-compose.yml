@@ -68,6 +68,7 @@ services:
       - ./cache:/cache
       - ./src:/src
       - ./.env:/.env
+      - /dev/shm:/dev/shm
 
   postgres:
     container_name: ${NAMESPACE}_postgres

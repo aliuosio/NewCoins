@@ -13,6 +13,7 @@ import socket
 import threading
 import logging
 import signal
+import datetime
 from typing import Dict, Any, Optional
 import socketserver
 from mexc_sdk import Spot
@@ -27,6 +28,13 @@ logger = logging.getLogger(__name__)
 # Socket configuration
 SOCKET_PATH = "/dev/shm/mexc_connection.sock"
 PID_FILE = "/dev/shm/mexc_connection.pid"
+LAST_ACTIVITY_FILE = "/dev/shm/mexc_connection_last_activity.txt"
+
+# Get idle timeout from environment (default: 20 minutes in seconds)
+IDLE_TIMEOUT = int(os.getenv('MEXC_POOL_TIMEOUT', 1200))
+
+# Log the configuration
+logger.info(f"Connection pool timeout: {IDLE_TIMEOUT} seconds")
 
 # Command constants
 CMD_PING = "PING"
@@ -47,6 +55,9 @@ class MEXCConnectionHandler(socketserver.BaseRequestHandler):
             data = self.request.recv(4096).decode('utf-8')
             if not data:
                 return
+            
+            # Update last activity timestamp
+            self.server.update_last_activity()
             
             # Parse command and parameters
             try:
@@ -119,7 +130,16 @@ class MEXCConnectionServer(socketserver.ThreadingUnixStreamServer):
     def __init__(self, server_address):
         self.mexc_client = None
         self.initialize_client()
+        self.idle_timeout = IDLE_TIMEOUT
+        self.idle_check_interval = 60  # Check for idle timeout every 60 seconds
         socketserver.ThreadingUnixStreamServer.__init__(self, server_address, MEXCConnectionHandler)
+        
+        # Initialize last activity time
+        self.update_last_activity()
+        
+        # Start idle timeout checker thread
+        self.idle_checker = threading.Thread(target=self._check_idle_timeout, daemon=True)
+        self.idle_checker.start()
     
     def initialize_client(self) -> None:
         """Initialize MEXC API client"""
@@ -136,6 +156,64 @@ class MEXCConnectionServer(socketserver.ThreadingUnixStreamServer):
         except Exception as e:
             logger.error(f"Failed to initialize MEXC API client: {str(e)}")
             raise
+    
+    def update_last_activity(self) -> None:
+        """Update the last activity timestamp"""
+        current_time = datetime.datetime.now().isoformat()
+        try:
+            with open(LAST_ACTIVITY_FILE, 'w') as f:
+                f.write(current_time)
+            logger.debug(f"Updated last activity timestamp: {current_time}")
+        except Exception as e:
+            logger.error(f"Failed to update last activity timestamp: {str(e)}")
+    
+    def _check_idle_timeout(self) -> None:
+        """Check if the server has been idle for too long and shut it down if necessary"""
+        while True:
+            try:
+                # Sleep first to avoid immediate shutdown
+                time.sleep(self.idle_check_interval)
+                
+                # Check if last activity file exists
+                if not os.path.exists(LAST_ACTIVITY_FILE):
+                    self.update_last_activity()
+                    continue
+                
+                # Read last activity timestamp
+                try:
+                    with open(LAST_ACTIVITY_FILE, 'r') as f:
+                        last_activity_str = f.read().strip()
+                    last_activity = datetime.datetime.fromisoformat(last_activity_str)
+                except (ValueError, IOError) as e:
+                    logger.error(f"Error reading last activity timestamp: {str(e)}")
+                    self.update_last_activity()
+                    continue
+                
+                # Calculate idle time
+                now = datetime.datetime.now()
+                idle_seconds = (now - last_activity).total_seconds()
+                
+                # Log idle time periodically
+                if idle_seconds > 300:  # Log every 5 minutes of inactivity
+                    idle_minutes = int(idle_seconds / 60)
+                    logger.info(f"Connection pool has been idle for {idle_minutes} minutes")
+                
+                # Check if idle timeout has been reached
+                if idle_seconds > self.idle_timeout:
+                    logger.info(f"Connection pool idle timeout reached ({self.idle_timeout} seconds). Shutting down.")
+                    # Clean up and shut down
+                    if os.path.exists(PID_FILE):
+                        os.remove(PID_FILE)
+                    if os.path.exists(SOCKET_PATH):
+                        os.remove(SOCKET_PATH)
+                    if os.path.exists(LAST_ACTIVITY_FILE):
+                        os.remove(LAST_ACTIVITY_FILE)
+                    # Shut down the server
+                    threading.Thread(target=self.shutdown).start()
+                    break
+            except Exception as e:
+                logger.error(f"Error in idle timeout checker: {str(e)}")
+                time.sleep(60)  # Sleep for a minute on error
 
 def is_server_running() -> bool:
     """Check if the connection pool server is already running"""
@@ -148,12 +226,19 @@ def is_server_running() -> bool:
             return True
         except (ProcessLookupError, ValueError, FileNotFoundError):
             # Process not running or PID file is invalid
-            if os.path.exists(PID_FILE):
-                os.remove(PID_FILE)
-            if os.path.exists(SOCKET_PATH):
-                os.remove(SOCKET_PATH)
+            cleanup_server_files()
             return False
     return False
+
+def cleanup_server_files() -> None:
+    """Clean up server files"""
+    for file_path in [PID_FILE, SOCKET_PATH, LAST_ACTIVITY_FILE]:
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logger.debug(f"Removed file: {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to remove file {file_path}: {str(e)}")
 
 def start_server() -> None:
     """Start the connection pool server"""
@@ -161,9 +246,8 @@ def start_server() -> None:
         logger.info("Connection pool server is already running")
         return
     
-    # Clean up any existing socket file
-    if os.path.exists(SOCKET_PATH):
-        os.remove(SOCKET_PATH)
+    # Clean up any existing server files
+    cleanup_server_files()
     
     # Start server
     server = MEXCConnectionServer(SOCKET_PATH)
@@ -175,17 +259,15 @@ def start_server() -> None:
     # Handle signals for clean shutdown
     def handle_signal(signum, frame):
         logger.info(f"Received signal {signum}, shutting down")
-        if os.path.exists(PID_FILE):
-            os.remove(PID_FILE)
-        if os.path.exists(SOCKET_PATH):
-            os.remove(SOCKET_PATH)
+        cleanup_server_files()
         server.shutdown()
         sys.exit(0)
     
     signal.signal(signal.SIGTERM, handle_signal)
     signal.signal(signal.SIGINT, handle_signal)
     
-    logger.info(f"Connection pool server started at {SOCKET_PATH}")
+    timeout_minutes = IDLE_TIMEOUT // 60
+    logger.info(f"Connection pool server started at {SOCKET_PATH} (idle timeout: {timeout_minutes} minutes)")
     server.serve_forever()
 
 class MEXCPoolClient:
@@ -196,6 +278,9 @@ class MEXCPoolClient:
         self.socket_path = SOCKET_PATH
         if start_if_not_running and not is_server_running():
             self._start_server()
+        elif is_server_running():
+            # Update last activity timestamp to prevent timeout during initialization
+            self._touch_activity_file()
     
     def _start_server(self) -> None:
         """Start the connection pool server as a background process"""
@@ -212,10 +297,22 @@ class MEXCPoolClient:
             time.sleep(0.5)
         logger.warning("Timed out waiting for connection pool server to start")
     
+    def _touch_activity_file(self) -> None:
+        """Update the last activity timestamp"""
+        current_time = datetime.datetime.now().isoformat()
+        try:
+            with open(LAST_ACTIVITY_FILE, 'w') as f:
+                f.write(current_time)
+        except Exception as e:
+            logger.error(f"Failed to update last activity timestamp: {str(e)}")
+    
     def _send_command(self, command: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Send command to the connection pool server"""
         if not os.path.exists(self.socket_path):
             raise ConnectionError(f"Connection pool server not running at {self.socket_path}")
+        
+        # Update last activity timestamp before sending command
+        self._touch_activity_file()
         
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
@@ -285,10 +382,44 @@ class MEXCPoolClient:
 
 def main():
     """Main function"""
-    if len(sys.argv) > 1 and sys.argv[1] == "start":
-        start_server()
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "start":
+            start_server()
+        elif sys.argv[1] == "status":
+            if is_server_running():
+                # Check idle time
+                try:
+                    with open(LAST_ACTIVITY_FILE, 'r') as f:
+                        last_activity_str = f.read().strip()
+                    last_activity = datetime.datetime.fromisoformat(last_activity_str)
+                    now = datetime.datetime.now()
+                    idle_seconds = (now - last_activity).total_seconds()
+                    idle_minutes = int(idle_seconds / 60)
+                    timeout_minutes = IDLE_TIMEOUT // 60
+                    print(f"Connection pool server is running")
+                    print(f"Idle for: {idle_minutes} minutes")
+                    print(f"Timeout after: {timeout_minutes} minutes")
+                    print(f"Time remaining: {timeout_minutes - idle_minutes} minutes")
+                except Exception as e:
+                    print(f"Connection pool server is running but could not read idle time: {str(e)}")
+            else:
+                print("Connection pool server is not running")
+        elif sys.argv[1] == "stop":
+            if is_server_running():
+                try:
+                    with open(PID_FILE, 'r') as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, signal.SIGTERM)
+                    print("Sent shutdown signal to connection pool server")
+                except Exception as e:
+                    print(f"Failed to stop connection pool server: {str(e)}")
+                    cleanup_server_files()
+            else:
+                print("Connection pool server is not running")
+        else:
+            print("Usage: python connection_pool.py [start|status|stop]")
     else:
-        print("Usage: python connection_pool.py start")
+        print("Usage: python connection_pool.py [start|status|stop]")
 
 if __name__ == "__main__":
     main()
