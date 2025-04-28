@@ -12,6 +12,7 @@ interface CoinData {
   fund_buy: number | null;
   fund_sell: number | null;
   profit: number | null;
+  futures?: boolean;
   [key: string]: any;
 }
 

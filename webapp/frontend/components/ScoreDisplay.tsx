@@ -5,6 +5,7 @@ interface ScoreDisplayProps {
   recommendation: string;
   recommendationDesc: string;
   selectedToken: string;
+  futures?: boolean;
 }
 
 /**
@@ -14,7 +15,8 @@ const ScoreDisplay: FC<ScoreDisplayProps> = ({
   score, 
   recommendation, 
   recommendationDesc,
-  selectedToken
+  selectedToken,
+  futures = false
 }) => {
   // Map recommendation to color classes
   const recommendationColor = {
@@ -37,16 +39,27 @@ const ScoreDisplay: FC<ScoreDisplayProps> = ({
         {Math.floor(score)}%
       </span>
       
-      <div className="w-full flex justify-center">
+      <div className="w-full flex flex-row items-center justify-center gap-4 mt-2">
         <a
           href={`https://www.mexc.com/de-DE/exchange/${selectedToken}_USDT`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 text-[#2DE282] underline text-sm hover:text-[#FF6A00] transition-colors text-center"
+          className="text-[#2DE282] underline text-base sm:text-base lg:text-lg hover:text-[#FF6A00] transition-colors text-center"
           style={{ display: 'inline-block' }}
         >
-          View on MEXC
+          MEXC Spot
         </a>
+        {futures && (
+          <a
+            href={`https://www.mexc.com/de-DE/futures/overview?symbol=${selectedToken}_USDT`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#2DE282] underline text-base sm:text-base lg:text-lg hover:text-[#FF6A00] transition-colors text-center"
+            style={{ display: 'inline-block' }}
+          >
+            MEXC Futures
+          </a>
+        )}
       </div>
     </div>
   );

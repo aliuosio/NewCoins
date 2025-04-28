@@ -18,7 +18,7 @@ services:
 
   webapp-backend:
     container_name: ${NAMESPACE}_webapp_backend
-    image: osioaliu/python:${PY_VERSION}
+    image: osioaliu/python_${NAMESPACE}:${PY_VERSION}
     pull_policy: always
     working_dir: /app
     volumes:
@@ -45,7 +45,7 @@ services:
     #  args:
     #    PY_VERSION: ${PY_VERSION}
     container_name: ${NAMESPACE}_python
-    image: osioaliu/python:${PY_VERSION}
+    image: osioaliu/python_${NAMESPACE}:${PY_VERSION}
     pull_policy: always
     tty: true
     init: true
