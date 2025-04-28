@@ -6,11 +6,21 @@ LABEL maintainer="Osiozekhai Aliu"
 RUN apt update && apt full-upgrade -y && \
 apt install -y cron curl postgresql-client nano uvicorn bash-completion git unzip && \
 apt clean && \
-rm -rf /var/lib/apt/lists/* && \
-echo "* * * * * echo 'Cron is running' >> /var/log/cron.log 2>&1" | crontab - && \
+rm -rf /var/lib/apt/lists/*
+
+RUN echo "* * * * * echo 'Cron is running' >> /var/log/cron.log 2>&1" | crontab - && \
+echo 'alias ll="ls -la"' >> /root/.bashrc && \
 echo 'export EDITOR=nano' >> /root/.bashrc && \
 echo 'export EDITOR=nano' >> /root/.profile && \
-echo 'if [ -f /usr/share/bash-completion/bash_completion ]; then . /usr/share/bash-completion/bash_completion; fi' >> /root/.bashrc
+echo 'if [ -f /usr/share/bash-completion/bash_completion ]; then . /usr/share/bash-completion/bash_completion; fi' >> /root/.bashrc && \
+echo 'source /root/.bashrc && source /root/.profile'
+
+# Install Node.js (required for mexc_sdk jsii dependency)
+RUN apt update && \
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+apt install -y nodejs && \
+apt clean && \
+rm -rf /var/lib/apt/lists/*
 
 COPY requirements-1.txt requirements-2.txt /tmp/
 
