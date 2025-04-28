@@ -1,7 +1,3 @@
--- Drop existing table and trigger
-DROP TABLE IF EXISTS analyse_social CASCADE;
-DROP FUNCTION IF EXISTS update_updated_at_column_analyse_social CASCADE;
-
 -- Social indicators scoring criteria
 
 -- Create table

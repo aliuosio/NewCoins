@@ -1,6 +1,3 @@
--- Drop existing table and related trigger/function
-DROP TABLE IF EXISTS analyse_technical CASCADE;
-DROP FUNCTION IF EXISTS update_updated_at_column_analyse_technical CASCADE;
 
 -- Technical indicators scoring criteria
 
