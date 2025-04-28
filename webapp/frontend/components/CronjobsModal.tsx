@@ -50,7 +50,7 @@ const CronjobsModal: FC<CronjobsModalProps> = ({
                     {formatCronjobDate(job.schedule)}
                   </span>
                   <span className="text-white break-all w-2/3 text-center text-base sm:text-lg">
-                    {job.command.replace('/usr/bin/python -m', '').replace('Trade.main', '').trim()}
+                    {job.command.replace('/usr/bin/python -m', '').replace('Trade.main', '').replace('Trade.pre_trade', 'pretrade').trim()}
                   </span>
                 </li>
               ))}
