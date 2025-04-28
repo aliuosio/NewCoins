@@ -94,6 +94,17 @@ class PrintCronJobManager:
                 dt = parser.parse(time_start)
             else:
                 dt = time_start
+                
+            # Calculate pre-trade time (5 minutes before buy)
+            pre_trade_dt = dt - timedelta(minutes=5)
+            pre_trade_minute = pre_trade_dt.minute
+            pre_trade_hour = pre_trade_dt.hour
+            pre_trade_day = pre_trade_dt.day
+            pre_trade_month = pre_trade_dt.month
+            pre_trade_cron_time = f"{pre_trade_minute} {pre_trade_hour} {pre_trade_day} {pre_trade_month} *"
+            pre_trade_job = f"{pre_trade_cron_time} /usr/bin/python -m Trade.pre_trade {symbol}"
+            
+            # Buy job at listing time
             minute = dt.minute
             hour = dt.hour
             day = dt.day
@@ -112,9 +123,17 @@ class PrintCronJobManager:
             sell_cron_time = f"{sell_minute} {sell_hour} {sell_day} {sell_month} *"
             sell_job = f"{sell_cron_time} /usr/bin/python -m Trade.main sell {symbol}"
 
+            # Add pre-trade job (5 minutes before buy)
+            if pre_trade_job not in current_crontab:
+                new_jobs.append(pre_trade_job)
+                save_cronjob(pre_trade_cron_time, f"/usr/bin/python -m Trade.pre_trade {symbol}")
+                
+            # Add buy job at listing time
             if buy_job not in current_crontab:
                 new_jobs.append(buy_job)
                 save_cronjob(cron_time, f"/usr/bin/python -m Trade.main buy {symbol}")
+                
+            # Add sell job after specified minutes
             if sell_job not in current_crontab:
                 new_jobs.append(sell_job)
                 save_cronjob(sell_cron_time, f"/usr/bin/python -m Trade.main sell {symbol}")
