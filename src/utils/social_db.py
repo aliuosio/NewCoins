@@ -47,7 +47,8 @@ def save_social_results(results: List, symbol: str, conn=None):
             'social_volume',
             'sentiment_analysis',
             'developer_activity',
-            'community_growth'
+            'community_growth',
+            'google_trends'
         ]
         
         for result in results:
