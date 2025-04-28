@@ -12,9 +12,10 @@ RUN apt update && apt full-upgrade -y && \
     echo 'export EDITOR=nano' >> /root/.profile && \
     echo 'if [ -f /usr/share/bash-completion/bash_completion ]; then . /usr/share/bash-completion/bash_completion; fi' >> /root/.bashrc
 
-# --- Automate mexc-api-sdk Python install ---
-RUN git clone https://github.com/mxcdevelop/mexc-api-sdk.git /src/mexc-api-sdk && \
-    cd /src/mexc-api-sdk/dist/python && \
-    tar -xzf mexc-sdk-*.tar.gz
+RUN git clone https://github.com/mxcdevelop/mexc-api-sdk.git /tmp/mexc-api-sdk && \
+    cd /tmp/mexc-api-sdk/dist/python && \
+    tar -xzf *.tar.gz && \
+    pip install /tmp/mexc-api-sdk/dist/python/mexc_sdk-1.0.0-py3-none-any.whl && \
+    rm -rf /tmp/mexc-api-sdk
 
 CMD ["cron", "-f"]
