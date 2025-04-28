@@ -54,7 +54,7 @@ const CoinDropdown: FC<CoinDropdownProps> = ({
                   : 'text-[#FF6A00] hover:bg-[#222] active:bg-[#222]'
               }`}
               style={{ minHeight: '44px' }}
-              onClick={() => { onSelect(symbol); onToggleDropdown(); }}
+              onClick={() => { onSelect(symbol); }}
             >
               {symbol}
             </div>

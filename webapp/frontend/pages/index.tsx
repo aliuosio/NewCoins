@@ -56,7 +56,7 @@ export default function Home() {
   
   // Set the selected token when initialCoin changes
   useEffect(() => {
-    if (initialCoin && initialCoin !== selectedToken) {
+    if (initialCoin && !selectedToken) {
       setSelectedToken(initialCoin);
     }
   }, [initialCoin, selectedToken]);
@@ -66,9 +66,10 @@ export default function Home() {
   
   // Handle token selection
   const handleTokenSelect = (token: string) => {
-    if (token !== selectedToken) {
-      setSelectedToken(token);
-    }
+    console.log('Token selected:', token);
+    setSelectedToken(token);
+    // Ensure dropdown closes after selection
+    setShowDropdown(false);
   };
   
   // Fetch data when token changes
