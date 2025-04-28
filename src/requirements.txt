@@ -17,7 +17,7 @@ joblib==1.4.2
 jsii==1.111.0
 lxml==5.3.2
 mexc-exchange-api==0.0.25
-mexc-sdk @ file:///src/mexc-api-sdk/dist/python/mexc_sdk-1.0.0-py3-none-any.whl#sha256=76bb2c773a201023fa0c4153259fdf994e5810df8462080b3e8fcb4eaec95b38
+mexc-sdk==0.0.1
 multidict==6.4.3
 nltk==3.9.1
 numpy==2.2.4
