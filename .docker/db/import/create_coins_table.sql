@@ -6,7 +6,6 @@
 -- This table stores basic information about cryptocurrencies and their trading history
 -- It can be used to track buy/sell operations and calculate profits/losses
 
-DROP TABLE IF EXISTS coins CASCADE;
 
 CREATE TABLE IF NOT EXISTS coins (
     -- Basic identification
