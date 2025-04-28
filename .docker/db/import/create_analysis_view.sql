@@ -40,9 +40,8 @@ calculated_scores AS (
     (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score) as total_technical_score,
     (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score + google_trends_score + sentiment_analysis_score + developer_activity_score + community_growth_score) as total_score
   FROM score_components
-) cs
-SELECT
-  cs.symbol,
+)
+SELECT cs.symbol,
   cs.trading_volume_score,
   cs.liquidity_score,
   cs.whale_transactions_score,
@@ -63,6 +62,7 @@ SELECT
     WHEN cs.total_score >= 30 THEN (SELECT RECOMMEND_WATCH_LABEL FROM (SELECT current_setting('RECOMMEND_WATCH_LABEL', true) as RECOMMEND_WATCH_LABEL) as env) || ' - Some concerns'
     ELSE (SELECT RECOMMEND_AVOID_LABEL FROM (SELECT current_setting('RECOMMEND_AVOID_LABEL', true) as RECOMMEND_AVOID_LABEL) as env) || ' - Significant concerns'
   END as recommendation
+FROM calculated_scores cs
 
 -- Regular views don't need WITH DATA
 

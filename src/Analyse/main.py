@@ -37,7 +37,7 @@ from Analyse.indicator_runner import IndicatorRunner
 from utils.db import create_tables
 from utils.analysis_db import save_analysis_results, get_latest_analysis, save_analysis_results_batch
 from utils.social_db import save_social_results, get_latest_social, save_social_results_batch
-from utils.analysis_view import create_analysis_view
+from utils.analysis_view import get_latest_analysis
 
 # Configure logging
 # Default to INFO level, but allow debug level if requested
@@ -223,7 +223,7 @@ def main():
     # Ensure DB tables exist
     if not check_table_exists('analyse_technical'):
         create_tables()
-        create_analysis_view()
+        # The analysis view is now created by Docker initialization scripts
 
     parser = argparse.ArgumentParser(description='PumpAndDump application')
     sub = parser.add_subparsers(dest='cmd')
