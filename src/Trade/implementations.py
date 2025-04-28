@@ -1,9 +1,11 @@
 import os
 import json
 import logging
+import time
 from typing import Dict, Any
 from utils.mexc_api_factory import MEXCApiFactory
 from .interfaces import TradingClient
+from .connection_pool import MEXCPoolClient, is_server_running
 
 class MEXCTradingClient(TradingClient):
     def __init__(self):
@@ -13,7 +15,24 @@ class MEXCTradingClient(TradingClient):
         self._load_cache()
         
         try:
-            self.client = MEXCApiFactory.create_trading_client()
+            # Check if connection pool is active from cache
+            if self.cached_data and self.cached_data.get('connection_pool_active', False):
+                self.logger.info("Using connection pool for MEXC API")
+                self.use_connection_pool = True
+                self.client = MEXCPoolClient(start_if_not_running=False)
+                
+                # If connection pool server isn't running, fall back to direct client
+                if not is_server_running():
+                    self.logger.warning("Connection pool server not running, falling back to direct client")
+                    self.use_connection_pool = False
+                    self.client = MEXCApiFactory.create_trading_client()
+            else:
+                self.logger.info("Using direct connection to MEXC API")
+                self.use_connection_pool = False
+                self.client = MEXCApiFactory.create_trading_client()
+                
+            # Test connection
+            self.client.ping()
             self.logger.info("MEXC client initialized successfully")
         except Exception as e:
             self.logger.error(f"Failed to initialize MEXC client: {str(e)}")

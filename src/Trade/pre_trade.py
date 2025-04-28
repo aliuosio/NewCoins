@@ -10,6 +10,7 @@ import logging
 import argparse
 from typing import Dict, Any
 from utils.mexc_api_factory import MEXCApiFactory
+from .connection_pool import MEXCPoolClient, is_server_running
 
 # Configure logging
 logging.basicConfig(
@@ -35,9 +36,16 @@ def fetch_and_cache_data(symbol: str) -> Dict[str, Any]:
     logger.info(f"Fetching pre-trade data for {symbol}")
     
     try:
-        # Initialize MEXC client
-        client = MEXCApiFactory.create_trading_client()
-        logger.info("MEXC client initialized successfully")
+        # Start connection pool if not running and initialize client
+        if not is_server_running():
+            logger.info("Starting connection pool server")
+        
+        # Initialize pool client (will start server if needed)
+        client = MEXCPoolClient(start_if_not_running=True)
+        
+        # Test connection
+        client.ping()
+        logger.info("Connected to MEXC API via connection pool")
         
         # 1. Try to fetch price data (may not be available for new listings)
         price = None
@@ -97,7 +105,8 @@ def fetch_and_cache_data(symbol: str) -> Dict[str, Any]:
         logger.info(f"Fetched balances: USDT={usdt_balance}, {asset}={asset_balance}")
         
         # Create cache data
-        server_time = int(client.time().get('serverTime', 0))
+        server_time_response = client.time()
+        server_time = int(server_time_response.get('serverTime', 0))
         
         # Calculate usable balance (99% of available to account for fees and fluctuations)
         usable_balance = usdt_balance * 0.99
@@ -114,7 +123,8 @@ def fetch_and_cache_data(symbol: str) -> Dict[str, Any]:
             "trading_status": trading_status,
             "timestamp": server_time,
             "is_new_listing": price is None,  # Flag to indicate if this is likely a new listing
-            "server_time": server_time
+            "server_time": server_time,
+            "connection_pool_active": True  # Flag to indicate connection pool is active
         }
         
         # Ensure RAM directory exists
