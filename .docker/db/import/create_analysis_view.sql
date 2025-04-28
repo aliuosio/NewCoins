@@ -10,7 +10,7 @@
 -- pre_sale_vesting: 10 points - No major unlocks in next 30 days
 
 -- Social indicators (30 points total):
--- social_volume_score: 10 points - 1000+ mentions, growing trend
+-- google_trends_score: 5 points - Strong uptrend in search interest
 -- sentiment_analysis_score: 10 points - >70% positive sentiment
 -- developer_activity_score: 5 points - Trending upwards
 -- community_growth_score: 5 points - >500 active members, constant discussion
@@ -29,14 +29,14 @@ SELECT
     t.smart_contract_audit_score,
     
     -- Social indicators
-    s.social_volume_score,
+    s.google_trends_score,
     s.sentiment_analysis_score,
     s.developer_activity_score,
     s.community_growth_score,
     
     -- Calculate total social score (max 30 points)
     (
-        COALESCE(s.social_volume_score, 0) +
+        COALESCE(s.google_trends_score, 0) +
         COALESCE(s.sentiment_analysis_score, 0) +
         COALESCE(s.developer_activity_score, 0) +
         COALESCE(s.community_growth_score, 0)
@@ -60,7 +60,7 @@ SELECT
         COALESCE(t.token_distribution_score, 0) +
         COALESCE(t.pre_sale_vesting_score, 0) +
         COALESCE(t.smart_contract_audit_score, 0) +
-        COALESCE(s.social_volume_score, 0) +
+        COALESCE(s.google_trends_score, 0) +
         COALESCE(s.sentiment_analysis_score, 0) +
         COALESCE(s.developer_activity_score, 0) +
         COALESCE(s.community_growth_score, 0)
@@ -75,7 +75,7 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.google_trends_score, 0) +
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
@@ -91,7 +91,7 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.google_trends_score, 0) +
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
@@ -103,7 +103,7 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.google_trends_score, 0) +
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
@@ -115,7 +115,7 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.google_trends_score, 0) +
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
@@ -127,7 +127,7 @@ SELECT
             COALESCE(t.token_distribution_score, 0) +
             COALESCE(t.pre_sale_vesting_score, 0) +
             COALESCE(t.smart_contract_audit_score, 0) +
-            COALESCE(s.social_volume_score, 0) +
+            COALESCE(s.google_trends_score, 0) +
             COALESCE(s.sentiment_analysis_score, 0) +
             COALESCE(s.developer_activity_score, 0) +
             COALESCE(s.community_growth_score, 0)
@@ -146,7 +146,7 @@ LEFT JOIN analyse_social s ON t.symbol = s.symbol
 -- Comments for the view and calculated fields
 -- View: Real-time view of cryptocurrency risk assessment combining technical (70 points) and social (30 points) indicators with recommendation categories
 -- Column total_technical_score: Sum of all technical indicator scores (max 70 points) including trading volume (15), liquidity (15), whale transactions (10), token distribution (10), pre-sale vesting (10), and smart contract audit (10)
--- Column total_social_score: Sum of all social indicator scores (max 30 points) including social volume (10), sentiment analysis (10), developer activity (5), and community growth (5)
+-- Column total_social_score: Sum of all social indicator scores (max 30 points) including google trends (5), sentiment analysis (10), developer activity (10), and community growth (5)
 -- Column total_score: Combined total of all technical and social indicators (max 100 points)
 -- Column score_percentage: Total score expressed as a percentage (0-100%)
 -- Column recommendation: Investment recommendation based on total score: STRONG BUY (≥80), BUY (≥70), HOLD (≥60), WATCH (≥50), AVOID (<50)

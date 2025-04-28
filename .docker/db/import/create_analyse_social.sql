@@ -8,7 +8,7 @@ DROP FUNCTION IF EXISTS update_updated_at_column_analyse_social CASCADE;
 CREATE TABLE IF NOT EXISTS analyse_social (
     id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,                   
-    social_volume_score DECIMAL(5,2),       
+    google_trends_score DECIMAL(5,2),       
     sentiment_analysis_score DECIMAL(5,2),  
     developer_activity_score DECIMAL(5,2),  
     community_growth_score DECIMAL(5,2),    
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS analyse_social (
 );
 
 -- Add column comments
-COMMENT ON COLUMN analyse_social.social_volume_score IS '10 points - 1000+ mentions, growing trend';
+COMMENT ON COLUMN analyse_social.google_trends_score IS '5 points - Strong uptrend in search interest';
 COMMENT ON COLUMN analyse_social.sentiment_analysis_score IS '10 points - >70% positive sentiment';
 COMMENT ON COLUMN analyse_social.developer_activity_score IS '5 points - Trending upwards';
 COMMENT ON COLUMN analyse_social.community_growth_score IS '5 points - >500 active members, constant discussion';
