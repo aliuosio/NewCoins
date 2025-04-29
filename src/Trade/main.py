@@ -2,7 +2,7 @@ import sys
 import logging
 import os
 from typing import Any
-from utils.db import DBConnection
+from utils.database import DBConnection
 from Trade.implementations import MEXCTradingClient
 from datetime import datetime
 

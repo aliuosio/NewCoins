@@ -1,68 +1,53 @@
 from fastapi import APIRouter, HTTPException
-from src.utils.db import DBConnection
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+import logging
+from database.repositories import CoinRepository
+from database import execute_query_with_error_handling
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 @router.get("/api/coin_start_times")
-def get_coin_start_times():
+def get_coin_start_times() -> List[Dict[str, Any]]:
     """
     Returns a list of coins with their symbol and start_time from the coins table.
     """
-    with DBConnection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT symbol, time_start FROM coins ORDER BY symbol;")
-            rows = cur.fetchall()
-            return [
-                {"symbol": row[0], "time_start": row[1]} for row in rows
-            ]
+    # Get all coins and extract only the symbol and time_start fields
+    coins = CoinRepository.get_all_coins()
+    return [
+        {"symbol": coin["symbol"], "time_start": coin["time_start"]} 
+        for coin in coins
+    ]
 
 @router.get("/api/coin_start_time/{symbol}")
-def get_coin_start_time(symbol: str):
+def get_coin_start_time(symbol: str) -> Dict[str, Any]:
     """
     Returns the start_time for a single coin symbol from the coins table.
     """
-    with DBConnection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT symbol, time_start FROM coins WHERE symbol = %s;", (symbol,))
-            row = cur.fetchone()
-            if row:
-                return {"symbol": row[0], "time_start": row[1]}
-            raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found.")
+    # Get the coin data and extract only the symbol and time_start fields
+    coin_data = CoinRepository.get_coin_data(symbol)
+    if not coin_data:
+        raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found.")
+    
+    return {
+        "symbol": coin_data["symbol"],
+        "time_start": coin_data["time_start"]
+    }
 
 @router.get("/api/coins")
 def get_all_coins() -> List[Dict[str, Any]]:
     """
     Returns all data for all coins from the coins table.
     """
-    with DBConnection() as conn:
-        with conn.cursor() as cur:
-            # First, get the column names
-            cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'coins' ORDER BY ordinal_position;")
-            columns = [col[0] for col in cur.fetchall()]
-            
-            # Then get all data
-            cur.execute("SELECT * FROM coins ORDER BY symbol;")
-            rows = cur.fetchall()
-            
-            # Convert to list of dictionaries
-            return [dict(zip(columns, row)) for row in rows]
+    return CoinRepository.get_all_coins()
 
 @router.get("/api/coin/{symbol}")
 def get_coin_data(symbol: str) -> Dict[str, Any]:
     """
     Returns all data for a single coin symbol from the coins table.
     """
-    with DBConnection() as conn:
-        with conn.cursor() as cur:
-            # First, get the column names
-            cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'coins' ORDER BY ordinal_position;")
-            columns = [col[0] for col in cur.fetchall()]
-            
-            # Then get the data for the specific symbol
-            cur.execute("SELECT * FROM coins WHERE symbol = %s;", (symbol,))
-            row = cur.fetchone()
-            
-            if row:
-                return dict(zip(columns, row))
-            raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found.")
+    coin_data = CoinRepository.get_coin_data(symbol)
+    if not coin_data:
+        raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found.")
+    return coin_data

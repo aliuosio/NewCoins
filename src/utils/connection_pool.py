@@ -33,13 +33,6 @@ except ImportError as e:
     MEXC_SDK_AVAILABLE = False
     Spot = None
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 # Socket configuration
 SOCKET_PATH = "/dev/shm/mexc_connection.sock"
 PID_FILE = "/dev/shm/mexc_connection.pid"
@@ -47,9 +40,6 @@ LAST_ACTIVITY_FILE = "/dev/shm/mexc_connection_last_activity.txt"
 
 # Get idle timeout from environment (default: 20 minutes in seconds)
 IDLE_TIMEOUT = int(os.getenv('MEXC_POOL_TIMEOUT', 1200))
-
-# Log the configuration
-logger.info(f"Connection pool timeout: {IDLE_TIMEOUT} seconds")
 
 # Command constants
 CMD_PING = "PING"
@@ -302,7 +292,6 @@ def start_server() -> None:
     signal.signal(signal.SIGINT, handle_signal)
     
     timeout_minutes = IDLE_TIMEOUT // 60
-    logger.info(f"Connection pool server started at {SOCKET_PATH} (idle timeout: {timeout_minutes} minutes)")
     server.serve_forever()
 
 class MEXCPoolClient:
@@ -326,14 +315,13 @@ class MEXCPoolClient:
     def _start_server(self) -> None:
         """Start the connection pool server as a background process"""
         import subprocess
-        logger.info("Starting connection pool server")
+       
         subprocess.Popen([sys.executable, __file__, "start"], 
                         stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE)
         # Wait for server to start
         for _ in range(10):
             if is_server_running():
-                logger.info("Connection pool server started")
                 return
             time.sleep(0.5)
         logger.warning("Timed out waiting for connection pool server to start")

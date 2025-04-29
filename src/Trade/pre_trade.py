@@ -10,8 +10,8 @@ import logging
 import argparse
 import time
 from typing import Dict, Any
-from mexc_sdk import Spot
 from utils.connection_pool import MEXCPoolClient, is_server_running, start_server
+# No database imports needed in this file
 
 # Configure logging
 logging.basicConfig(
@@ -39,7 +39,6 @@ def fetch_and_cache_data(symbol: str) -> Dict[str, Any]:
     try:
         # Always try to ensure the connection pool is running
         if not is_server_running():
-            logger.info("Starting connection pool server")
             try:
                 start_server()
                 time.sleep(1)  # Give it a moment to start
@@ -57,19 +56,6 @@ def fetch_and_cache_data(symbol: str) -> Dict[str, Any]:
                 if is_server_running():
                     client = MEXCPoolClient(start_if_not_running=False)
                     client.ping()
-                    logger.info("Connected to MEXC API via connection pool")
-                    break
-                else:
-                    logger.warning("Connection pool server not available, falling back to direct client")
-                    api_key = os.getenv('MEXC_API_KEY')
-                    api_secret = os.getenv('MEXC_API_SECRET')
-                    if not api_key or not api_secret:
-                        logger.error("MEXC_API_KEY and MEXC_API_SECRET must be set in the environment")
-                        raise ValueError("API credentials not found in environment variables")
-                    client = Spot(api_key=api_key, api_secret=api_secret)
-                    client.ping()
-                    logger.info("Connected to MEXC API via direct client")
-                    break
             except Exception as e:
                 logger.warning(f"Connection attempt {connection_attempts} failed: {str(e)}")
                 time.sleep(1)  # Brief pause before retry

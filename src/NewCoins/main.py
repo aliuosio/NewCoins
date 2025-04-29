@@ -11,7 +11,7 @@ from utils.connection_pool import MEXCPoolClient
 from typing import Any, List
 import os
 import time
-from utils.db import insert_new_coins, create_tables
+from utils.database import CoinRepository
 import argparse
 
 
@@ -68,8 +68,6 @@ class NewCoinsFetcher:
 
 
 def main():
-    # ensure DB schema exists
-    create_tables()
     parser = argparse.ArgumentParser()
     parser.add_argument('hours', type=int, nargs='?', default=24,
                         help='Positive for next hours, negative for past hours')
@@ -96,7 +94,7 @@ def main():
         else:
             coins = [c for c in coins if c.start_time and now_ms - window_ms <= int(c.start_time) <= now_ms]
             window_msg = f'past {abs(hours)}h'
-        insert_new_coins(coins)
+        CoinRepository.insert_new_coins(coins)
         print(f"Fetched and persisted {len(coins)} coins scheduled in the {window_msg}:")
         for coin in coins:
             print(coin)

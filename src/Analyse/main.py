@@ -34,10 +34,8 @@ from Analyse.Social import (
     GoogleTrendsIndicator
 )
 from Analyse.indicator_runner import IndicatorRunner
-from utils.db import create_tables
-from utils.analysis_db import save_analysis_results, get_latest_analysis, save_analysis_results_batch
-from utils.social_db import save_social_results, get_latest_social, save_social_results_batch
-from utils.analysis_view import get_latest_analysis
+from utils.database import AnalysisRepository, SocialRepository
+# Note: analysis_view will also need to be refactored, but for now we'll keep it
 
 # Configure logging
 # Default to INFO level, but allow debug level if requested
@@ -220,10 +218,6 @@ def check_table_exists(table_name):
 
 def main():
     """Main entry point for the PumpAndDump analysis CLI."""
-    # Ensure DB tables exist
-    if not check_table_exists('analyse_technical'):
-        create_tables()
-        # The analysis view is now created by Docker initialization scripts
 
     parser = argparse.ArgumentParser(description='PumpAndDump application')
     sub = parser.add_subparsers(dest='cmd')
@@ -241,8 +235,8 @@ def main():
         social_indicators = create_social_indicators(data_provider)
         tech_results_dict = group_results_by_symbol(tech, technical_indicators, all_symbols)
         social_results_dict = group_results_by_symbol(social, social_indicators, all_symbols)
-        save_analysis_results_batch(tech_results_dict)
-        save_social_results_batch(social_results_dict)
+        AnalysisRepository.save_analysis_results_batch(tech_results_dict)
+        SocialRepository.save_social_results_batch(social_results_dict)
     else:
         parser.print_help()
 

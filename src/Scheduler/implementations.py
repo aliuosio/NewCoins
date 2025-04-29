@@ -1,5 +1,5 @@
 import subprocess
-from utils.db import DBConnection
+from utils.database import DBConnection
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -86,7 +86,7 @@ class PrintCronJobManager:
         from datetime import timedelta
         import sys, os
         sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-        from utils.cron_db import save_cronjob
+        from utils.database import CronRepository
         for symbol, time_start in symbol_times:
             # Convert time_start (datetime) to cron format
             if isinstance(time_start, str):
@@ -126,17 +126,17 @@ class PrintCronJobManager:
             # Add pre-trade job (5 minutes before buy)
             if pre_trade_job not in current_crontab:
                 new_jobs.append(pre_trade_job)
-                save_cronjob(pre_trade_cron_time, f"/usr/bin/python -m Trade.pre_trade {symbol}")
+                CronRepository.save_cronjob(pre_trade_cron_time, f"/usr/bin/python -m Trade.pre_trade {symbol}")
                 
             # Add buy job at listing time
             if buy_job not in current_crontab:
                 new_jobs.append(buy_job)
-                save_cronjob(cron_time, f"/usr/bin/python -m Trade.main buy {symbol}")
+                CronRepository.save_cronjob(cron_time, f"/usr/bin/python -m Trade.main buy {symbol}")
                 
             # Add sell job after specified minutes
             if sell_job not in current_crontab:
                 new_jobs.append(sell_job)
-                save_cronjob(sell_cron_time, f"/usr/bin/python -m Trade.main sell {symbol}")
+                CronRepository.save_cronjob(sell_cron_time, f"/usr/bin/python -m Trade.main sell {symbol}")
 
         if new_jobs:
             # Combine existing crontab with new jobs

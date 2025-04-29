@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 """
-Database connection and persistence utilities for PumpAndDump app.
+Database connection management for the NewCoins application.
+Provides connection pooling and context manager for database connections.
 """
 import os
-# psycopg2-binary installs as psycopg2 module
 import psycopg2
 from psycopg2 import pool
-from psycopg2.extras import execute_values
-import pytz
-from datetime import datetime
-from pathlib import Path
 import threading
 import time
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Import database configuration
 from utils.db_config import get_db_config
 
 # Connection pool settings
@@ -27,6 +24,13 @@ _connection_pool = None
 _pool_lock = threading.Lock()
 
 def get_connection_pool():
+    """
+    Get or create a database connection pool.
+    Implements retry logic with exponential backoff for connection failures.
+    
+    Returns:
+        ThreadedConnectionPool: A connection pool instance
+    """
     global _connection_pool
     if _connection_pool is None:
         with _pool_lock:
@@ -63,50 +67,41 @@ def get_connection_pool():
     return _connection_pool
 
 class DBConnection:
+    """
+    Context manager for database connections.
+    Automatically gets a connection from the pool and returns it when done.
+    
+    Usage:
+        with DBConnection() as conn:
+            # Use conn for database operations
+    """
     def __init__(self):
         self._conn = None
 
     def __enter__(self):
+        """Get a connection from the pool when entering the context"""
         self._conn = get_connection_pool().getconn()
         return self._conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Return the connection to the pool when exiting the context"""
         if self._conn:
-            self._conn.commit()
+            if exc_type is None:
+                # Only commit if no exception occurred
+                self._conn.commit()
+            else:
+                # Rollback on exception
+                self._conn.rollback()
             get_connection_pool().putconn(self._conn)
             self._conn = None
-
-def insert_new_coins(coins):
-    """
-    Persist a list of NewCoin instances into PostgreSQL using full schema.
-    
-    Args:
-        coins: List of NewCoin instances to persist
+            
+    def putconn(self, conn):
+        """
+        Return a connection to the pool.
+        This is used when a connection is obtained outside the context manager.
         
-    Returns:
-        True if successful, False otherwise
-    """
-    if not coins:
-        return True
-        
-    try:
-        # Prepare data for batch insert
-        data_list = [
-            {
-                "name": c.name,
-                "symbol": c.symbol,
-                "time_start": datetime.fromtimestamp(int(c.start_time) / 1000, tz=pytz.utc),
-                "futures": c.futures
-            }
-            for c in coins
-        ]
-        
-        # Import here to avoid circular imports
-        from .db_repository import DatabaseRepository
-        
-        # Use DatabaseRepository for batch insert
-        table = os.getenv('POSTGRES_TABLE')
-        return DatabaseRepository.batch_insert_or_update(table, data_list, "symbol")
-    except Exception as e:
-        logger.error(f"Error inserting new coins: {e}")
-        return False
+        Args:
+            conn: The connection to return to the pool
+        """
+        if conn:
+            get_connection_pool().putconn(conn)
