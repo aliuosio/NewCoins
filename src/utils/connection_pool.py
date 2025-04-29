@@ -16,7 +16,22 @@ import signal
 import datetime
 from typing import Dict, Any, Optional
 import socketserver
-from mexc_sdk import Spot
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Try to import mexc_sdk, but provide a fallback if it fails
+try:
+    from mexc_sdk import Spot
+    MEXC_SDK_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Could not import mexc_sdk: {e}. Some functionality will be limited.")
+    MEXC_SDK_AVAILABLE = False
+    Spot = None
 
 # Configure logging
 logging.basicConfig(

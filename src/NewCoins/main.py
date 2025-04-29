@@ -7,7 +7,7 @@ from .interfaces import HTTPClient
 from dataclasses import dataclass
 import sys
 from .implementations import RequestsHTTPClient
-from Trade.connection_pool import MEXCPoolClient
+from utils.connection_pool import MEXCPoolClient
 from typing import Any, List
 import os
 import time
