@@ -1,9 +1,9 @@
 import subprocess
-from utils.database import DBConnection
+from utils.database.connection import DBConnection
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List
-from interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
+from Scheduler.interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
 
 ANALYSIS_VIEW = 'analysis_summary'
 
@@ -73,6 +73,15 @@ class PrintCronJobManager:
         if not symbol_times:
             print("[Scheduler] No coins qualified for trading.")
             return
+            
+        # Import required modules
+        import os
+        from datetime import timedelta
+        import sys
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+        from utils.database import CronRepository
+        from dateutil import parser
+        
         # Get current crontab
         try:
             result = subprocess.run(['crontab', '-l'], capture_output=True, text=True, check=False)
@@ -81,68 +90,68 @@ class PrintCronJobManager:
             print(f"[Scheduler] Could not read current crontab: {e}")
             current_crontab = ''
 
-        new_jobs = []
-        import os
-        from datetime import timedelta
-        import sys, os
-        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-        from utils.database import CronRepository
-        for symbol, time_start in symbol_times:
-            # Convert time_start (datetime) to cron format
-            if isinstance(time_start, str):
-                from dateutil import parser
-                dt = parser.parse(time_start)
-            else:
-                dt = time_start
-                
-            # Calculate pre-trade time (5 minutes before buy)
-            pre_trade_dt = dt - timedelta(minutes=5)
-            pre_trade_minute = pre_trade_dt.minute
-            pre_trade_hour = pre_trade_dt.hour
-            pre_trade_day = pre_trade_dt.day
-            pre_trade_month = pre_trade_dt.month
-            pre_trade_cron_time = f"{pre_trade_minute} {pre_trade_hour} {pre_trade_day} {pre_trade_month} *"
-            pre_trade_job = f"{pre_trade_cron_time} /usr/bin/python -m Trade.pre_trade {symbol}"
+        # Get environment variables
+        sell_after_min = int(os.getenv('SELL_AFTER_MIN', 10))
+        
+        # Helper function to create cron time string
+        def format_cron_time(dt):
+            return f"{dt.minute} {dt.hour} {dt.day} {dt.month} *"
             
-            # Buy job at listing time
-            minute = dt.minute
-            hour = dt.hour
-            day = dt.day
-            month = dt.month
-            # Weekday is optional, use '*'
-            cron_time = f"{minute} {hour} {day} {month} *"
-            buy_job = f"{cron_time} /usr/bin/python -m Trade.main buy {symbol}"
-
-            # Get SELL_AFTER_MIN from env, default 10
-            sell_after_min = int(os.getenv('SELL_AFTER_MIN', 10))
+        # Helper function to create job string
+        def format_job_string(cron_time, command):
+            return f"{cron_time} {command}"
+        
+        # Helper function to process a single job
+        def process_job(cron_time, command, job_type):
+            job_string = format_job_string(cron_time, command)
+            
+            # Check if job already exists in crontab
+            if job_string in current_crontab:
+                return None
+                
+            # Save to database (will check for duplicates internally)
+            CronRepository.save_cronjob(cron_time, command)
+            
+            # Return the job string for crontab update
+            return job_string
+        
+        # Process all symbol times
+        new_jobs = []
+        for symbol, time_start in symbol_times:
+            # Parse time_start if it's a string
+            dt = parser.parse(time_start) if isinstance(time_start, str) else time_start
+            
+            # Calculate job times
+            pre_trade_dt = dt - timedelta(minutes=5)
+            buy_dt = dt
             sell_dt = dt + timedelta(minutes=sell_after_min)
-            sell_minute = sell_dt.minute
-            sell_hour = sell_dt.hour
-            sell_day = sell_dt.day
-            sell_month = sell_dt.month
-            sell_cron_time = f"{sell_minute} {sell_hour} {sell_day} {sell_month} *"
-            sell_job = f"{sell_cron_time} /usr/bin/python -m Trade.main sell {symbol}"
+            
+            # Format cron times
+            pre_trade_cron_time = format_cron_time(pre_trade_dt)
+            buy_cron_time = format_cron_time(buy_dt)
+            sell_cron_time = format_cron_time(sell_dt)
+            
+            # Format commands
+            pre_trade_cmd = f"/usr/bin/python -m Trade.pre_trade {symbol}"
+            buy_cmd = f"/usr/bin/python -m Trade.main buy {symbol}"
+            sell_cmd = f"/usr/bin/python -m Trade.main sell {symbol}"
+            
+            # Process each job type
+            pre_trade_job = process_job(pre_trade_cron_time, pre_trade_cmd, "pre-trade")
+            buy_job = process_job(buy_cron_time, buy_cmd, "buy")
+            sell_job = process_job(sell_cron_time, sell_cmd, "sell")
+            
+            # Add non-None jobs to the list
+            for job in [pre_trade_job, buy_job, sell_job]:
+                if job:
+                    new_jobs.append(job)
 
-            # Add pre-trade job (5 minutes before buy)
-            if pre_trade_job not in current_crontab:
-                new_jobs.append(pre_trade_job)
-                CronRepository.save_cronjob(pre_trade_cron_time, f"/usr/bin/python -m Trade.pre_trade {symbol}")
-                
-            # Add buy job at listing time
-            if buy_job not in current_crontab:
-                new_jobs.append(buy_job)
-                CronRepository.save_cronjob(cron_time, f"/usr/bin/python -m Trade.main buy {symbol}")
-                
-            # Add sell job after specified minutes
-            if sell_job not in current_crontab:
-                new_jobs.append(sell_job)
-                CronRepository.save_cronjob(sell_cron_time, f"/usr/bin/python -m Trade.main sell {symbol}")
-
+        # Update crontab if we have new jobs
         if new_jobs:
             # Combine existing crontab with new jobs
             updated_crontab = current_crontab.strip() + '\n' + '\n'.join(new_jobs) + '\n'
             try:
-                proc = subprocess.run(['crontab', '-'], input=updated_crontab, text=True, check=True)
+                subprocess.run(['crontab', '-'], input=updated_crontab, text=True, check=True)
                 for job in new_jobs:
                     print(f"[Scheduler] Added cronjob: {job}")
             except Exception as e:
