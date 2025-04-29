@@ -206,13 +206,13 @@ class AnalysisRepository:
                     # The column trading_volume_24h doesn't exist in the database
                     if "total_volume_24h" in details:
                         # We don't store this value directly as it's already reflected in the score
+                        pass
             
             # Vesting data
             for result in results:
                 if result.indicator_name == "pre_sale_vesting" and hasattr(result, "details"):
                     details = result.details
                     # Skip upcoming_unlocks as it's not needed and not in the database schema
-                    pass
                     if "days_to_next_unlock" in details:
                         additional_data["days_to_next_unlock"] = details["days_to_next_unlock"]
                     if "unlock_percentage" in details:
@@ -582,26 +582,55 @@ class CronRepository:
         return "cronjobs"
     
     @staticmethod
-    def save_cronjob(schedule: str, command: str) -> bool:
+    def cronjob_exists(schedule: str, command: str) -> bool:
         """
-        Save a new cronjob record to the database.
+        Check if a cronjob with the given schedule and command already exists.
         
         Args:
             schedule: Cron schedule expression
             command: Command to execute
             
         Returns:
-            True if successful, False otherwise
+            True if the cronjob exists, False otherwise
         """
         try:
+            table = CronRepository._get_table_name()
+            query = f"SELECT id FROM {table} WHERE schedule = %s AND command = %s"
+            result = DatabaseRepository.execute_query(query, (schedule, command), fetch_all=False)
+            return result is not None
+        except Exception as e:
+            logger.exception(f"Error checking if cronjob exists: {str(e)}")
+            return False
+    
+    @staticmethod
+    def save_cronjob(schedule: str, command: str) -> bool:
+        """
+        Save a new cronjob record to the database if it doesn't already exist.
+        
+        Args:
+            schedule: Cron schedule expression
+            command: Command to execute
+            
+        Returns:
+            True if successful (or already exists), False otherwise
+        """
+        try:
+            # Check if the cronjob already exists
+            if CronRepository.cronjob_exists(schedule, command):
+                logger.info(f"Cronjob already exists: {schedule} {command}")
+                return True
+                
+            # Create new cronjob data
             data = {
                 "schedule": schedule,
                 "command": command,
                 "created_at": datetime.now()
             }
             
+            # Insert the new cronjob
             table = CronRepository._get_table_name()
             DatabaseRepository.insert_or_update(table, data)
+            logger.info(f"Saved new cronjob: {schedule} {command}")
             return True
         except Exception as e:
             logger.exception(f"Error saving cronjob: {str(e)}")
