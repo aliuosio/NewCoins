@@ -140,6 +140,7 @@ export default function Home() {
               recommendation={getRecommendation(indicatorsData.score_percentage || 0).recommendation}
               recommendationDesc={getRecommendation(indicatorsData.score_percentage || 0).description}
               selectedToken={selectedToken}
+              futures={!!(coinData && coinData.futures)}
             />
           )}
           

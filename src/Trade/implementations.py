@@ -3,9 +3,9 @@ import json
 import logging
 import time
 from typing import Dict, Any
-from utils.mexc_api_factory import MEXCApiFactory
+from mexc_sdk import Spot
 from .interfaces import TradingClient
-from .connection_pool import MEXCPoolClient, is_server_running
+from utils.connection_pool import MEXCPoolClient, is_server_running, start_server
 
 class MEXCTradingClient(TradingClient):
     def __init__(self):
@@ -13,30 +13,83 @@ class MEXCTradingClient(TradingClient):
         self.cache_file = "/dev/shm/mexc_trade_cache.json"
         self.cached_data = {}
         self._load_cache()
+        self.use_connection_pool = True
+        self.client = None
+        self.connection_attempts = 0
+        self.max_connection_attempts = 3
+        
+        # Initialize client with connection pool as the preferred method
+        self._ensure_client()
+    
+    def _ensure_client(self) -> bool:
+        """Ensure we have a working client connection, with fallback mechanisms"""
+        if self.client is not None:
+            # If we already have a client, check if it's working
+            try:
+                self.client.ping()
+                return True
+            except Exception:
+                self.logger.warning("Existing client connection failed, will attempt to reconnect")
+                self.client = None
+        
+        # Increment connection attempts
+        self.connection_attempts += 1
         
         try:
-            # Check if connection pool is active from cache
-            if self.cached_data and self.cached_data.get('connection_pool_active', False):
-                self.logger.info("Using connection pool for MEXC API")
-                self.use_connection_pool = True
-                self.client = MEXCPoolClient(start_if_not_running=False)
+            # Always try connection pool first
+            if self.use_connection_pool:
+                self.logger.info("Attempting to use connection pool for MEXC API")
                 
-                # If connection pool server isn't running, fall back to direct client
-                if not is_server_running():
-                    self.logger.warning("Connection pool server not running, falling back to direct client")
+                # Check if server is running, start it if not
+                if not is_server_running() and self.connection_attempts <= 1:
+                    self.logger.info("Connection pool server not running, starting it")
+                    try:
+                        start_server()
+                        time.sleep(1)  # Give it a moment to start
+                    except Exception as e:
+                        self.logger.warning(f"Failed to start connection pool server: {str(e)}")
+                
+                # Try to connect to the pool
+                if is_server_running():
+                    self.client = MEXCPoolClient(start_if_not_running=False)
+                    self.client.ping()  # Test connection
+                    self.logger.info("Successfully connected to MEXC API via connection pool")
+                    self.use_connection_pool = True
+                    self.connection_attempts = 0
+                    return True
+                else:
+                    self.logger.warning("Connection pool server not available, falling back to direct client")
                     self.use_connection_pool = False
-                    self.client = MEXCApiFactory.create_trading_client()
-            else:
+            
+            # Fall back to direct client if pool is not available
+            if not self.use_connection_pool:
                 self.logger.info("Using direct connection to MEXC API")
-                self.use_connection_pool = False
-                self.client = MEXCApiFactory.create_trading_client()
+                api_key = os.getenv('MEXC_API_KEY')
+                api_secret = os.getenv('MEXC_API_SECRET')
+                if not api_key or not api_secret:
+                    self.logger.error("MEXC_API_KEY and MEXC_API_SECRET must be set in the environment")
+                    return False
+                self.client = Spot(api_key=api_key, api_secret=api_secret)
+                self.client.ping()  # Test connection
+                self.logger.info("Successfully connected to MEXC API via direct client")
+                self.connection_attempts = 0
+                return True
                 
-            # Test connection
-            self.client.ping()
-            self.logger.info("MEXC client initialized successfully")
         except Exception as e:
-            self.logger.error(f"Failed to initialize MEXC client: {str(e)}")
-            raise
+            self.logger.error(f"Failed to initialize MEXC client (attempt {self.connection_attempts}): {str(e)}")
+            
+            # If we've tried too many times, give up
+            if self.connection_attempts >= self.max_connection_attempts:
+                self.logger.error("Maximum connection attempts reached, giving up")
+                return False
+            
+            # If we were using the pool and it failed, try direct connection
+            if self.use_connection_pool:
+                self.logger.info("Falling back to direct connection")
+                self.use_connection_pool = False
+                return self._ensure_client()
+            
+            return False
     
     def _load_cache(self):
         """Load cached data from RAM if available"""
@@ -64,6 +117,10 @@ class MEXCTradingClient(TradingClient):
         
         # If not in cache, fetch from API
         try:
+            # Ensure client is connected
+            if not self._ensure_client():
+                raise ConnectionError("Failed to establish connection to MEXC API")
+                
             account_info = self.client.account_info()
             for balance in account_info.get('balances', []):
                 if balance.get('asset') == asset:
@@ -77,6 +134,10 @@ class MEXCTradingClient(TradingClient):
 
     def place_order(self, action: str, symbol: str, asset: str, use_cache: bool = True) -> Dict[str, Any]:
         try:
+            # Ensure client is connected
+            if not self._ensure_client():
+                raise ConnectionError("Failed to establish connection to MEXC API")
+                
             side = "BUY" if action == "buy" else "SELL"
             
             # Try to use cached data if available and requested
@@ -200,6 +261,10 @@ class MEXCTradingClient(TradingClient):
     def fast_market_buy(self, symbol: str) -> Dict[str, Any]:
         """Execute a market buy order with minimal API calls using cached data"""
         try:
+            # Ensure client is connected
+            if not self._ensure_client():
+                raise ConnectionError("Failed to establish connection to MEXC API")
+                
             # Extract asset from symbol
             asset = symbol.replace('USDT', '')
             

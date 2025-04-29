@@ -8,9 +8,10 @@ import os
 import json
 import logging
 import argparse
+import time
 from typing import Dict, Any
-from utils.mexc_api_factory import MEXCApiFactory
-from .connection_pool import MEXCPoolClient, is_server_running
+from mexc_sdk import Spot
+from utils.connection_pool import MEXCPoolClient, is_server_running, start_server
 
 # Configure logging
 logging.basicConfig(
@@ -36,16 +37,45 @@ def fetch_and_cache_data(symbol: str) -> Dict[str, Any]:
     logger.info(f"Fetching pre-trade data for {symbol}")
     
     try:
-        # Start connection pool if not running and initialize client
+        # Always try to ensure the connection pool is running
         if not is_server_running():
             logger.info("Starting connection pool server")
+            try:
+                start_server()
+                time.sleep(1)  # Give it a moment to start
+            except Exception as e:
+                logger.warning(f"Failed to start connection pool server: {str(e)}")
         
-        # Initialize pool client (will start server if needed)
-        client = MEXCPoolClient(start_if_not_running=True)
+        # Initialize pool client with appropriate fallback
+        connection_attempts = 0
+        max_attempts = 3
+        client = None
         
-        # Test connection
-        client.ping()
-        logger.info("Connected to MEXC API via connection pool")
+        while connection_attempts < max_attempts:
+            connection_attempts += 1
+            try:
+                if is_server_running():
+                    client = MEXCPoolClient(start_if_not_running=False)
+                    client.ping()
+                    logger.info("Connected to MEXC API via connection pool")
+                    break
+                else:
+                    logger.warning("Connection pool server not available, falling back to direct client")
+                    api_key = os.getenv('MEXC_API_KEY')
+                    api_secret = os.getenv('MEXC_API_SECRET')
+                    if not api_key or not api_secret:
+                        logger.error("MEXC_API_KEY and MEXC_API_SECRET must be set in the environment")
+                        raise ValueError("API credentials not found in environment variables")
+                    client = Spot(api_key=api_key, api_secret=api_secret)
+                    client.ping()
+                    logger.info("Connected to MEXC API via direct client")
+                    break
+            except Exception as e:
+                logger.warning(f"Connection attempt {connection_attempts} failed: {str(e)}")
+                time.sleep(1)  # Brief pause before retry
+        
+        if client is None:
+            raise ConnectionError("Failed to establish connection to MEXC API after multiple attempts")
         
         # 1. Try to fetch price data (may not be available for new listings)
         price = None

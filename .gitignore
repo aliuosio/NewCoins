@@ -5,4 +5,5 @@ mexc-api-sdk
 .next/
 .next-cache/
 src/raw_api_debug.txt
-cache
+cache/*
+!cache/.gitkeep

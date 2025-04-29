@@ -16,7 +16,22 @@ import signal
 import datetime
 from typing import Dict, Any, Optional
 import socketserver
-from mexc_sdk import Spot
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Try to import mexc_sdk, but provide a fallback if it fails
+try:
+    from mexc_sdk import Spot
+    MEXC_SDK_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Could not import mexc_sdk: {e}. Some functionality will be limited.")
+    MEXC_SDK_AVAILABLE = False
+    Spot = None
 
 # Configure logging
 logging.basicConfig(
@@ -44,6 +59,7 @@ CMD_EXCHANGE_INFO = "EXCHANGE_INFO"
 CMD_TICKER_PRICE = "TICKER_PRICE"
 CMD_TIME = "TIME"
 CMD_SHUTDOWN = "SHUTDOWN"
+CMD_FUTURES_EXISTS = "FUTURES_EXISTS"
 
 class MEXCConnectionHandler(socketserver.BaseRequestHandler):
     """
@@ -108,6 +124,25 @@ class MEXCConnectionHandler(socketserver.BaseRequestHandler):
                 self.send_response({"result": "Shutting down"})
                 threading.Thread(target=self.server.shutdown).start()
             
+            elif command == CMD_FUTURES_EXISTS:
+                base_currency = params.get('symbol')
+                if not base_currency:
+                    self.send_response({"error": "Missing required parameter: symbol"})
+                    return
+                try:
+                    from mexc_sdk import Futures
+                    futures_client = Futures()
+                    contracts = futures_client.market_get_contracts()
+                    target_symbol = f"{base_currency.upper()}_USDT"
+                    exists = False
+                    for contract in contracts['data']:
+                        if contract['symbol'] == target_symbol and contract['state'] == 'online':
+                            exists = True
+                            break
+                    self.send_response({"result": exists})
+                except Exception as e:
+                    logger.error(f"Error checking futures contract: {str(e)}")
+                    self.send_response({"error": str(e)})
             else:
                 self.send_response({"error": f"Unknown command: {command}"})
         
@@ -274,6 +309,12 @@ class MEXCPoolClient:
     """
     Client for the MEXC API connection pool
     """
+    def futures_contract_exists(self, symbol: str) -> bool:
+        response = self._send_command(CMD_FUTURES_EXISTS, {"symbol": symbol})
+        if "error" in response:
+            raise Exception(response["error"])
+        return response.get("result", False)
+
     def __init__(self, start_if_not_running: bool = False):
         self.socket_path = SOCKET_PATH
         if start_if_not_running and not is_server_running():
