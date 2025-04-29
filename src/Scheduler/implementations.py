@@ -1,9 +1,9 @@
 import subprocess
-from utils.database import DBConnection
+from utils.database.connection import DBConnection
 import os
 from datetime import datetime, timedelta, timezone
 from typing import List
-from interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
+from Scheduler.interfaces import CoinFetcher, CoinRepository, CoinAnalyzer, RecommendationService, CronJobManager
 
 ANALYSIS_VIEW = 'analysis_summary'
 
