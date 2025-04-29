@@ -20,7 +20,6 @@ class NewCoin:
     symbol: str
     name: str
     start_time: str
-    end_time: str
     futures: bool = False  # TRUE if coin is listed in futures, default FALSE
 
 
@@ -45,12 +44,11 @@ class NewCoinsFetcher:
                 symbol = item.get("vcoinName", item.get("symbol"))
                 name = item.get("vcoinNameFull", symbol)
                 start = item.get("firstOpenTime", item.get("startTime", ""))
-                end = item.get("endTime", "")
+                # Removed end_time as it's not used anywhere
             elif isinstance(item, (str, int)):
                 symbol = str(item)
                 name = symbol
                 start = ""
-                end = ""
             else:
                 continue
             try:
@@ -61,7 +59,6 @@ class NewCoinsFetcher:
                 symbol=symbol,
                 name=name,
                 start_time=str(start),
-                end_time=str(end),
                 futures=futures_flag
             ))
         return coins
