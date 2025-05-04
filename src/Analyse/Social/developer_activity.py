@@ -24,7 +24,7 @@ class DeveloperActivityIndicator(BaseIndicator):
     Uses real-time data from GitHub when available.
     Falls back to simulation when API keys are not provided or when APIs fail.
 
-    Scoring (max 10 points): Based on activity level, community engagement, and issue resolution.
+    Scoring (max 15 points): Based on activity level, community engagement, and issue resolution.
     - Activity Score (60%): Based on commit count and contributors.
     - Engagement Score (30%): Based on stars, forks, subscribers.
     - Resolution Score (10%): Based on issue resolution rate.
@@ -36,7 +36,7 @@ class DeveloperActivityIndicator(BaseIndicator):
     def __init__(self, data_provider: IDataProvider):
         super().__init__(
             "developer_activity",
-            10.0, # Max score remains 10
+            15.0, # Max score updated to 15
             data_provider
         )
         # Note: The old version mapped this to 'social_mentions' in the DB.

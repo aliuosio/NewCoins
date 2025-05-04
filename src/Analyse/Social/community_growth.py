@@ -24,7 +24,7 @@ class CommunityGrowthIndicator(BaseIndicator):
     Uses real-time data from Twitter, Reddit, and other sources when available.
     Falls back to simulation when API keys are not provided or when APIs fail.
 
-    Scoring (max 5 points): Based on a calculated 'community_health' score derived
+    Scoring (max 10 points): Based on a calculated 'community_health' score derived
     from community size, engagement rate, and growth rate.
     """
 
@@ -32,10 +32,10 @@ class CommunityGrowthIndicator(BaseIndicator):
     CACHE_TTL = 3600
 
     def __init__(self, data_provider: IDataProvider):
-        # Max score is 5.0 as per the old indicator's logic/comment
+        # Max score updated to 10.0
         super().__init__(
             "community_growth",
-            5.0,
+            10.0,
             data_provider
         )
         # Note: The old version mapped this to 'community_engagement' in the DB.

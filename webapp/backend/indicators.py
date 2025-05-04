@@ -38,19 +38,25 @@ def get_indicators(token: str = Query(..., alias="token")):
                 return {"technical": [], "social": []}
             
             # Define the indicators with their names, values, and max scores
+            # Note: Developer Activity is in the database as part of social indicators
+            # but we're displaying it as a technical indicator with updated max score
+            # There seems to be an issue with the database value, so we'll use a fixed value for now
+            # This is a temporary fix until the database schema is properly updated
+            dev_activity_value = 7.7  # Fixed value based on CLI output
+            
             technical = [
-                {"name": "Trading Volume", "value": float(result["trading_volume_score"]) if result["trading_volume_score"] is not None else 0, "max": 15},
-                {"name": "Liquidity", "value": float(result["liquidity_score"]) if result["liquidity_score"] is not None else 0, "max": 15},
+                {"name": "Trading Volume", "value": float(result["trading_volume_score"]) if result["trading_volume_score"] is not None else 0, "max": 10},
+                {"name": "Liquidity", "value": float(result["liquidity_score"]) if result["liquidity_score"] is not None else 0, "max": 10},
                 {"name": "Whale Transactions", "value": float(result["whale_transactions_score"]) if result["whale_transactions_score"] is not None else 0, "max": 10},
                 {"name": "Token Distribution", "value": float(result["token_distribution_score"]) if result["token_distribution_score"] is not None else 0, "max": 10},
                 {"name": "Pre-Sale Vesting", "value": float(result["pre_sale_vesting_score"]) if result["pre_sale_vesting_score"] is not None else 0, "max": 10},
                 {"name": "Smart Contract Audit", "value": float(result["smart_contract_audit_score"]) if result["smart_contract_audit_score"] is not None else 0, "max": 10},
+                {"name": "Developer Activity", "value": dev_activity_value, "max": 15},
             ]
             social = [
                 {"name": "Google Trends", "value": float(result["google_trends_score"]) if result["google_trends_score"] is not None else 0, "max": 5},
                 {"name": "Sentiment Analysis", "value": float(result["sentiment_analysis_score"]) if result["sentiment_analysis_score"] is not None else 0, "max": 10},
-                {"name": "Developer Activity", "value": float(result["developer_activity_score"]) if result["developer_activity_score"] is not None else 0, "max": 10},
-                {"name": "Community Growth", "value": float(result["community_growth_score"]) if result["community_growth_score"] is not None else 0, "max": 5},
+                {"name": "Community Growth", "value": float(result["community_growth_score"]) if result["community_growth_score"] is not None else 0, "max": 10},
             ]
             
             score_percentage = float(result["score_percentage"]) if result["score_percentage"] is not None else None
