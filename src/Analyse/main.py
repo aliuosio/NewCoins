@@ -63,14 +63,14 @@ def create_technical_indicators(data_provider):
         WhaleTransactionsIndicator(data_provider=data_provider),
         TokenDistributionIndicator(data_provider=data_provider),
         PreSaleVestingIndicator(data_provider=data_provider),
-        SmartContractAuditIndicator(data_provider=data_provider)
+        SmartContractAuditIndicator(data_provider=data_provider),
+        DeveloperActivityIndicator(data_provider=data_provider)
     ]
 
 def create_social_indicators(data_provider):
     """Factory for social indicators list."""
     return [
         SentimentAnalysisIndicator(data_provider=data_provider),
-        DeveloperActivityIndicator(data_provider=data_provider),
         CommunityGrowthIndicator(data_provider=data_provider),
         GoogleTrendsIndicator(data_provider=data_provider)
     ]

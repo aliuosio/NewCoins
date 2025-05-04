@@ -11,7 +11,7 @@ from ..interfaces import IDataProvider
 class LiquidityIndicator(BaseIndicator):
     """
     Indicator that measures liquidity based on spread and market depth.
-    Awards up to 15 points for having tight spread (<0.5%) and deep order book.
+    Awards up to 10 points for having tight spread (<0.5%) and deep order book.
     Enhanced with volatility-adjusted spread and market impact analysis.
     """
     
@@ -22,7 +22,7 @@ class LiquidityIndicator(BaseIndicator):
         Args:
             data_provider: Data provider to use for fetching data
         """
-        super().__init__("liquidity", 15.0, data_provider)
+        super().__init__("liquidity", 10.0, data_provider)
         self._target_spread = 0.005  # 0.5%
         self._volatility_window = 14  # Days to calculate volatility
         self._market_impact_threshold = 0.01  # 1% price impact

@@ -10,7 +10,7 @@ from ..interfaces import IDataProvider
 class TradingVolumeIndicator(BaseIndicator):
     """
     Indicator that measures trading volume over 24 hours.
-    Awards up to 15 points for having at least $1M in 24h trading volume.
+    Awards up to 10 points for having at least $1M in 24h trading volume.
     Based on the original PumpAndDump implementation.
     """
     
@@ -21,7 +21,7 @@ class TradingVolumeIndicator(BaseIndicator):
         Args:
             data_provider: Data provider to use for fetching data
         """
-        super().__init__("trading_volume", 15.0, data_provider)
+        super().__init__("trading_volume", 10.0, data_provider)
         self._target_volume = 1_000_000  # $1M in USD
     
     def _calculate(self, symbol: str, data: Dict[str, Any]) -> Dict[str, Any]:

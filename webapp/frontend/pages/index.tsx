@@ -22,12 +22,13 @@ export default function Home() {
     'Token Distribution',
     'Pre-Sale Vesting',
     'Smart Contract Audit',
+    'Developer Activity',
   ];
   
   const SOCIAL_LABELS = [
-    'Social Volume',
+    'Google Trends',
     'Sentiment Analysis',
-    'Developer Activity',
+    'Community Growth',
   ];
 
   // State for UI controls
