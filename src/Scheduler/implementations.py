@@ -38,18 +38,14 @@ class PostgresCoinRepository:
                     (now, next_24h)
                 )
                 coins = [(row[0], row[1]) for row in cur.fetchall()]
-            print(f"[Scheduler] Found new coins with times (next 24h): {coins}")
-            return coins
+                return coins
 
 
 class DefaultCoinAnalyzer:
     def analyze(self, symbols: List[str]) -> None:
-        if not symbols:
-            print("[Scheduler] No new coins to analyze.")
-            return
-        coin_str = ','.join(symbols)
-        print(f"[Scheduler] Analyzing: {coin_str}")
-        subprocess.run(["python", "main.py", "analyze", coin_str], check=True)
+        if symbols:
+            coin_str = ','.join(symbols)
+            subprocess.run(["python", "main.py", "analyze", coin_str], check=True)
 
 class PostgresRecommendationService:
     def get_qualified(self) -> List[str]:
@@ -63,15 +59,13 @@ class PostgresRecommendationService:
             with conn.cursor() as cur:
                 cur.execute(f"SELECT symbol FROM {ANALYSIS_VIEW} WHERE FLOOR(score_percentage) >= %s", (threshold,))
                 coins = [row[0] for row in cur.fetchall()]
-            print(f"[Scheduler] Qualified coins for trading (score >= {threshold}): {coins}")
-            return coins
+                return coins
 
 import subprocess
 
 class PrintCronJobManager:
     def create_jobs(self, symbol_times: list) -> None:
         if not symbol_times:
-            print("[Scheduler] No coins qualified for trading.")
             return
             
         # Import required modules

@@ -1,19 +1,19 @@
 -- SQL script to create a materialized view that combines technical and social indicators
 -- and calculates the overall score with categories
 
--- Technical indicators (70 points total):
--- trading_volume: 15 points - >$1M in first 24h on another exchange
--- liquidity: 15 points - Tight spread (<0.5%), deep order book
--- whale_transactions: 10 points - >50% whale buys, no mass sell-offs
--- token_distribution: 10 points - No single wallet holding >10%
--- smart_contract_audit: 10 points - Certik/SlowMist audit, no vulnerabilities
--- pre_sale_vesting: 10 points - No major unlocks in next 30 days
+-- Technical indicators (75 points total):
+-- trading_volume_score: 10 points - >$1M in first 24h on another exchange
+-- liquidity_score: 10 points - Tight spread (<0.5%), deep order book
+-- whale_transactions_score: 10 points - >50% whale buys, no mass sell-offs
+-- token_distribution_score: 10 points - No single wallet holding >10%
+-- pre_sale_vesting_score: 10 points - No major unlocks in next 30 days
+-- smart_contract_audit_score: 10 points - Certik/SlowMist audit, no vulnerabilities
+-- developer_activity_score: 15 points - Active GitHub commits, roadmap progress
 
--- Social indicators (30 points total):
+-- Social indicators (25 points total):
 -- google_trends_score: 5 points - Strong uptrend in search interest
 -- sentiment_analysis_score: 10 points - >70% positive sentiment
--- developer_activity_score: 10 points - Trending upwards
--- community_growth_score: 5 points - >500 active members, constant discussion
+-- community_growth_score: 10 points - >500 active members, constant discussion
 
 -- Create regular view with optimized structure using CTEs
 CREATE OR REPLACE VIEW analysis_summary AS
@@ -36,9 +36,9 @@ WITH score_components AS (
 calculated_scores AS (
   SELECT 
     *,
-    (google_trends_score + sentiment_analysis_score + developer_activity_score + community_growth_score) as total_social_score,
-    (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score) as total_technical_score,
-    (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score + google_trends_score + sentiment_analysis_score + developer_activity_score + community_growth_score) as total_score
+    (google_trends_score + sentiment_analysis_score + community_growth_score) as total_social_score,
+    (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score + developer_activity_score) as total_technical_score,
+    (trading_volume_score + liquidity_score + whale_transactions_score + token_distribution_score + pre_sale_vesting_score + smart_contract_audit_score + developer_activity_score + google_trends_score + sentiment_analysis_score + community_growth_score) as total_score
   FROM score_components
 )
 SELECT cs.symbol,
@@ -72,8 +72,8 @@ FROM calculated_scores cs
 
 -- Comments for the view and calculated fields
 -- View: Real-time view of cryptocurrency risk assessment combining technical (70 points) and social (30 points) indicators with recommendation categories
--- Column total_technical_score: Sum of all technical indicator scores (max 70 points) including trading volume (15), liquidity (15), whale transactions (10), token distribution (10), pre-sale vesting (10), and smart contract audit (10)
--- Column total_social_score: Sum of all social indicator scores (max 30 points) including google trends (5), sentiment analysis (10), developer activity (10), and community growth (5)
+-- Column total_technical_score: Sum of all technical indicator scores (max 75 points) including trading volume (10), liquidity (10), whale transactions (10), token distribution (10), pre-sale vesting (10), smart contract audit (10), and developer activity (15)
+-- Column total_social_score: Sum of all social indicator scores (max 25 points) including google trends (5), sentiment analysis (10), and community growth (10)
 -- Column total_score: Combined total of all technical and social indicators (max 100 points)
 -- Column score_percentage: Total score expressed as a percentage (0-100%)
 -- Column recommendation: Investment recommendation based on total score: STRONG BUY (≥80), BUY (≥70), HOLD (≥60), WATCH (≥50), AVOID (<50)

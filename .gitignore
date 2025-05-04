@@ -7,3 +7,4 @@ mexc-api-sdk
 src/raw_api_debug.txt
 cache/*
 !cache/.gitkeep
+cron.log

@@ -1,9 +1,21 @@
 import sys
+import logging
 from utils.database import DBConnection
 from Trade.implementations import MEXCTradingClient
-from datetime import datetime
+from datetime import datetime, timezone
+import time
+
+_db_connection = None
+_trading_client = None
+
+def warmup():
+    """Pre-initialize resources to make subsequent executions faster"""
+    global _trading_client
+    _trading_client = MEXCTradingClient()
+    
 
 class OrderRepository:
+    
     def save_order(self, symbol, action, order_response):
         now = datetime.now(timezone.utc)
         price = None
@@ -29,32 +41,32 @@ class OrderRepository:
             price_sell = price
             fund_sell = fund
 
-        with DBConnection() as conn:
-            with conn.cursor() as cur:
-                insert_query = """
-                INSERT INTO coins (name, symbol, time_start, time_buy, time_sell, price_buy, price_sell, fund_buy, fund_sell, profit)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (symbol) DO UPDATE SET
-                    time_buy = EXCLUDED.time_buy,
+        connection = DBConnection()
+        with connection.cursor() as cur:
+            insert_query = """
+            INSERT INTO coins (name, symbol, time_start, time_buy, time_sell, price_buy, price_sell, fund_buy, fund_sell, profit)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (symbol) DO UPDATE SET
+                time_buy = EXCLUDED.time_buy,
                     time_sell = EXCLUDED.time_sell,
                     price_buy = EXCLUDED.price_buy,
                     price_sell = EXCLUDED.price_sell,
                     fund_buy = EXCLUDED.fund_buy,
                     fund_sell = EXCLUDED.fund_sell,
                     profit = EXCLUDED.profit
-                """
-                cur.execute(insert_query, (
-                    symbol, symbol, now, time_buy, time_sell, price_buy, price_sell, fund_buy, fund_sell, profit
-                ))
+            """
+            cur.execute(insert_query, (
+                symbol, symbol, now, time_buy, time_sell, price_buy, price_sell, fund_buy, fund_sell, profit
+            ))
 
 def main():
-    try:
         action = sys.argv[1].lower()
         symbol = sys.argv[2].upper()
         if not symbol.endswith('USDT'):
             symbol += 'USDT'
 
-        trading_client = MEXCTradingClient()
+        trading_client = _trading_client if _trading_client else MEXCTradingClient()
+        
         if action == "buy":
             response = trading_client.fast_market_buy(symbol)
         else:
@@ -68,8 +80,7 @@ def main():
             order_response=response
         )
 
-    except Exception:
-        sys.exit(1)
+warmup()
 
 if __name__ == "__main__":
     main()
