@@ -56,6 +56,7 @@ services:
       /bin/bash -c "
       tail -f /dev/null
       "
+    profiles: ["tools"]
     volumes:
       - ./cache:/cache
       - ./src:/src
