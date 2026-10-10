@@ -111,7 +111,14 @@ Bring the stack up:
 docker compose up -d
 ```
 
-Enter the Python container when you want to run CLI commands interactively:
+> Default starts postgres + webapp-backend + webapp-frontend only (no python worker).
+
+For CLI work, start the python worker via the `tools` profile:
+```bash
+docker compose --profile tools up -d
+```
+
+Enter the Python container when you want to run CLI commands interactively (requires the `tools` profile up):
 ```bash
 docker compose exec python bash
 ```
@@ -142,6 +149,12 @@ python -m NewCoins.main
 # set a custom window in hours:
 python -m NewCoins.main 48    # next 48 hours
 python -m NewCoins.main -12   # past 12 hours
+```
+
+One-off runs without an idle worker (no `tools` profile needed):
+```bash
+docker compose run --rm python bash
+docker compose run --rm python python main.py analyze BTC
 ```
 
 ### Environment Variables
